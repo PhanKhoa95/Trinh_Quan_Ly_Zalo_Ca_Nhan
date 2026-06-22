@@ -1,0 +1,26 @@
+{
+  "message": {
+    "successes": 135,
+    "errors": 1
+  },
+  "sendMessage": {
+    "successes": 0,
+    "errors": 1
+  },
+  "reaction": {
+    "successes": 8,
+    "errors": 0
+  },
+  "undo": {
+    "successes": 1,
+    "errors": 0
+  },
+  "saveMemberMemory": {
+    "successes": 5,
+    "errors": 0
+  },
+  "group_event": {
+    "successes": 2,
+    "errors": 0
+  }
+}

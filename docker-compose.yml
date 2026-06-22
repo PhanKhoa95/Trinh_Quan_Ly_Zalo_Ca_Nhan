@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  zalo-group-manager:
+    container_name: zalo_group_manager
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      # Ánh xạ thư mục dữ liệu cục bộ để giữ cấu hình từ khóa, lịch sử chiến dịch
+      - ./server/data:/usr/src/app/server/data
+      # Ánh xạ thư mục sessions để giữ cookie đăng nhập Zalo, tránh quét lại QR khi restart
+      - ./server/sessions:/usr/src/app/server/sessions
+    restart: unless-stopped

@@ -1,0 +1,41 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+.pnpm-store/
+
+# Local databases and runtime state
+server/data/*.db
+server/data/*.db-journal
+server/data/*.json
+!server/data/ai-tools-config.json
+!server/data/ai-tools-stats.json
+
+# Log files
+*.log
+logs/
+server/logs/
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS metadata
+thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files & screenshot logs
+system_logs_filtered.png
+tempmediaStorage/

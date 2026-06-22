@@ -1,0 +1,185 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/zalo_manager.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Session {
+  id          String   @id // e.g. acc-xxxxxxxx
+  name        String
+  phone       String   @unique
+  avatar      String?
+  sessionFile String
+  groupsCount Int      @default(0)
+  msgsSent    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Rule {
+  id         String   @id @default(uuid())
+  keywords   String   // stored as JSON string (array of keywords)
+  matchType  String   // contains, exact, regex
+  reply      String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Campaign {
+  id            String   @id // camp-xxxxx
+  accountId     String
+  targets       String   // JSON string of group IDs: '["2510995767713191398"]'
+  message       String
+  delay         Int      @default(5)
+  scheduledTime String?
+  progress      Int      @default(0)
+  status        String   @default("pending") // pending, running, completed, failed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model GroupSetting {
+  groupId        String   @id
+  lockName       Boolean  @default(false)
+  lockDesc       Boolean  @default(false)
+  approveMembers Boolean  @default(false)
+  allowLink      Boolean  @default(true)
+  groupPurpose   String?
+  hostGroupId    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AiSetting {
+  id                String   @id @default("default")
+  aiEnabled         Boolean  @default(false)
+  aiProvider        String   @default("openai")
+  aiModel           String   @default("gpt-4o-mini")
+  aiApiKey          String   @default("")
+  aiApiKeyPool      String   @default("[]") // stored as JSON array string
+  aiSystemPrompt    String   @default("Bạn là một trợ lý AI hữu ích trong nhóm chat Zalo.")
+  aiTriggerPrefix   String   @default("@bot")
+  aiMode            String   @default("prefix")
+  aiGroups          String   @default("[]") // stored as JSON array string
+  ragTopK           Int      @default(3)
+  ragScoreThreshold Float    @default(0.6)
+  ragSearchMode     String   @default("hybrid")
+  stringeeSid       String   @default("")
+  stringeeSecret    String   @default("")
+  stringeeHotline   String   @default("")
+  stringeeServerUrl String   @default("")
+  globalHostGroupId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Knowledge {
+  id            String    @id // e.g. know-xxxx
+  title         String
+  content       String    // Summary up to 5000 characters
+  sourceType    String    @default("manual") // manual, url, googledoc
+  sourceUrl     String?
+  syncInterval  Int       @default(1440) // Minutes. Mặc định 24h = 1440m
+  lastSyncedAt  DateTime?
+  syncStatus    String    @default("synced") // synced, syncing, failed
+  active        Boolean   @default(true)
+  chunks        String    @default("[]") // JSON string of chunks array [{text, index, vectors}]
+  charCount     Int       @default(0)
+  chunkCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Call {
+  id             String   @id @default(uuid())
+  stringeeCallId String   @unique
+  phoneNumber    String
+  clientName     String   @default("Khách hàng")
+  direction      String   @default("outbound")
+  status         String   @default("completed")
+  duration       Int      @default(0)
+  transcript     String   @default("[]") // stored as JSON array string
+  recordingUrl   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Member {
+  id            String   @id // compound "groupId-zaloId"
+  groupId       String
+  zaloId        String
+  name          String
+  phone         String?
+  vipStatus     String   @default("normal") // normal, vip, blacklist
+  notes         String?
+  xungHo        String?  // preferred pronoun for xưng hô (e.g. Anh, Chị, Bạn, Em, Chú, Cô, Sếp)
+  avatar        String?  // Zalo avatar URL
+  lastSentiment String   @default("Bình thường")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  memories      MemberMemory[]
+  sentiments    MemberSentiment[]
+
+  @@unique([groupId, zaloId])
+}
+
+model MemberSentiment {
+  id          String   @id @default(uuid())
+  groupId     String
+  zaloId      String
+  sentiment   String   // Bình thường, Vui vẻ, Tức giận, Lo lắng
+  createdAt   DateTime @default(now())
+
+  member      Member   @relation(fields: [groupId, zaloId], references: [groupId, zaloId], onDelete: Cascade)
+}
+
+model MemberMemory {
+  id          String   @id @default(uuid())
+  groupId     String
+  zaloId      String
+  fact        String
+  importance  Int      @default(3) // 1-5 scale
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  member      Member   @relation(fields: [groupId, zaloId], references: [groupId, zaloId], onDelete: Cascade)
+}
+
+model Message {
+  id          String   @id // zalo msgId or auto-generated sim-xxxx
+  groupId     String
+  senderId    String
+  senderName  String
+  content     String   // text or media URL/JSON
+  msgType     String   @default("chat.text")
+  isSelf      Boolean  @default(false)
+  timestamp   BigInt   // Miliseconds timestamp
+  createdAt   DateTime @default(now())
+}
+
+model GroupData {
+  id         String   @id @default(uuid())
+  groupId    String
+  zaloId     String?
+  senderName String?
+  dataType   String   // order, report, other
+  keyInfo    String
+  rawMessage String?
+  status     String   @default("pending") // pending, completed, cancelled
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Log {
+  id        String   @id @default(uuid())
+  level     String   // info, warn, error, debug
+  category  String   // api, zalo, queue, voice, db, system
+  message   String
+  metadata  String?  // JSON string
+  createdAt DateTime @default(now())
+}

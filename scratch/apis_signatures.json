@@ -1,0 +1,586 @@
+[
+  {
+    "file": "acceptFriendRequest.d.ts",
+    "signature": "export declare const acceptFriendRequestFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "addGroupBlockedMember.d.ts",
+    "signature": "export declare const addGroupBlockedMemberFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string | string[], groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "addGroupDeputy.d.ts",
+    "signature": "export declare const addGroupDeputyFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string | string[], groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "addPollOptions.d.ts",
+    "signature": "export declare const addPollOptionsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: AddPollOptionsPayload) => Promise<AddPollOptionsResponse>;"
+  },
+  {
+    "file": "addQuickMessage.d.ts",
+    "signature": "export declare const addQuickMessageFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (addPayload: AddQuickMessagePayload) => Promise<AddQuickMessageResponse>;"
+  },
+  {
+    "file": "addReaction.d.ts",
+    "signature": "export declare const addReactionFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (icon: Reactions | CustomReaction, dest: AddReactionDestination) => Promise<AddReactionResponse>;"
+  },
+  {
+    "file": "addUnreadMark.d.ts",
+    "signature": "export declare const addUnreadMarkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (threadId: string, type?: ThreadType) => Promise<AddUnreadMarkResponse>;"
+  },
+  {
+    "file": "addUserToGroup.d.ts",
+    "signature": "export declare const addUserToGroupFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string | string[], groupId: string) => Promise<AddUserToGroupResponse>;"
+  },
+  {
+    "file": "blockUser.d.ts",
+    "signature": "export declare const blockUserFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (userId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "blockViewFeed.d.ts",
+    "signature": "export declare const blockViewFeedFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (isBlockFeed: boolean, userId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "changeAccountAvatar.d.ts",
+    "signature": "export declare const changeAccountAvatarFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (avatarSource: AttachmentSource) => Promise<\"\">;"
+  },
+  {
+    "file": "changeFriendAlias.d.ts",
+    "signature": "export declare const changeFriendAliasFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (alias: string, friendId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "changeGroupAvatar.d.ts",
+    "signature": "export declare const changeGroupAvatarFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (avatarSource: AttachmentSource, groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "changeGroupName.d.ts",
+    "signature": "export declare const changeGroupNameFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (name: string, groupId: string) => Promise<ChangeGroupNameResponse>;"
+  },
+  {
+    "file": "changeGroupOwner.d.ts",
+    "signature": "export declare const changeGroupOwnerFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string, groupId: string) => Promise<ChangeGroupOwnerResponse>;"
+  },
+  {
+    "file": "createAutoReply.d.ts",
+    "signature": "export declare const createAutoReplyFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: CreateAutoReplyPayload) => Promise<CreateAutoReplyResponse>;"
+  },
+  {
+    "file": "createCatalog.d.ts",
+    "signature": "export declare const createCatalogFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (catalogName: string) => Promise<CreateCatalogResponse>;"
+  },
+  {
+    "file": "createGroup.d.ts",
+    "signature": "export declare const createGroupFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: CreateGroupOptions) => Promise<CreateGroupResponse>;"
+  },
+  {
+    "file": "createNote.d.ts",
+    "signature": "export declare const createNoteFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: CreateNoteOptions, groupId: string) => Promise<NoteDetail>;"
+  },
+  {
+    "file": "createPoll.d.ts",
+    "signature": "export declare const createPollFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: CreatePollOptions, groupId: string) => Promise<PollDetail>;"
+  },
+  {
+    "file": "createProductCatalog.d.ts",
+    "signature": "export declare const createProductCatalogFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: CreateProductCatalogPayload) => Promise<CreateProductCatalogResponse>;"
+  },
+  {
+    "file": "createReminder.d.ts",
+    "signature": "export declare const createReminderFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: CreateReminderOptions, threadId: string, type?: ThreadType) => Promise<CreateReminderResponse>;"
+  },
+  {
+    "file": "custom.d.ts",
+    "signature": "export declare const customFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => <T, K = any>(name: string, callback: CustomAPICallback<T, K>) => void;"
+  },
+  {
+    "file": "deleteAutoReply.d.ts",
+    "signature": "export declare const deleteAutoReplyFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (id: number) => Promise<DeleteAutoReplyResponse>;"
+  },
+  {
+    "file": "deleteAvatar.d.ts",
+    "signature": "export declare const deleteAvatarFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (photoId: string | string[]) => Promise<DeleteAvatarResponse>;"
+  },
+  {
+    "file": "deleteCatalog.d.ts",
+    "signature": "export declare const deleteCatalogFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (catalogId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "deleteChat.d.ts",
+    "signature": "export declare const deleteChatFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (lastMessage: DeleteChatLastMessage, threadId: string, type?: ThreadType) => Promise<DeleteChatResponse>;"
+  },
+  {
+    "file": "deleteGroupInviteBox.d.ts",
+    "signature": "export declare const deleteGroupInviteBoxFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string | string[], blockFutureInvite?: boolean) => Promise<DeleteGroupInviteBoxResponse>;"
+  },
+  {
+    "file": "deleteMessage.d.ts",
+    "signature": "export declare const deleteMessageFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (dest: DeleteMessageDestination, onlyMe?: boolean) => Promise<DeleteMessageResponse>;"
+  },
+  {
+    "file": "deleteProductCatalog.d.ts",
+    "signature": "export declare const deleteProductCatalogFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: DeleteProductCatalogPayload) => Promise<DeleteProductCatalogResponse>;"
+  },
+  {
+    "file": "disableGroupLink.d.ts",
+    "signature": "export declare const disableGroupLinkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "disperseGroup.d.ts",
+    "signature": "export declare const disperseGroupFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "editNote.d.ts",
+    "signature": "export declare const editNoteFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: EditNoteOptions, groupId: string) => Promise<NoteDetail>;"
+  },
+  {
+    "file": "editReminder.d.ts",
+    "signature": "export declare const editReminderFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: EditReminderOptions, threadId: string, type?: ThreadType) => Promise<EditReminderResponse>;"
+  },
+  {
+    "file": "enableGroupLink.d.ts",
+    "signature": "export declare const enableGroupLinkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string) => Promise<EnableGroupLinkResponse>;"
+  },
+  {
+    "file": "fetchAccountInfo.d.ts",
+    "signature": "export declare const fetchAccountInfoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<FetchAccountInfoResponse>;"
+  },
+  {
+    "file": "findUser.d.ts",
+    "signature": "export declare const findUserFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (phoneNumber: string, avatarSize?: AvatarSize) => Promise<UserBasic>;"
+  },
+  {
+    "file": "findUserByUsername.d.ts",
+    "signature": "export declare const findUserByUsernameFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (username: string, avatarSize?: AvatarSize) => Promise<UserBasic>;"
+  },
+  {
+    "file": "forwardMessage.d.ts",
+    "signature": "export declare const forwardMessageFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: ForwardMessagePayload, threadIds: string[], type?: ThreadType) => Promise<ForwardMessageResponse>;"
+  },
+  {
+    "file": "getAliasList.d.ts",
+    "signature": "export declare const getAliasListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (count?: number, page?: number) => Promise<GetAliasListResponse>;"
+  },
+  {
+    "file": "getAllFriends.d.ts",
+    "signature": "export declare const getAllFriendsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (count?: number, page?: number, avatarSize?: AvatarSize) => Promise<GetAllFriendsResponse>;"
+  },
+  {
+    "file": "getAllGroups.d.ts",
+    "signature": "export declare const getAllGroupsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetAllGroupsResponse>;"
+  },
+  {
+    "file": "getArchivedChatList.d.ts",
+    "signature": "export declare const getArchivedChatListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetArchivedChatListResponse>;"
+  },
+  {
+    "file": "getAutoDeleteChat.d.ts",
+    "signature": "export declare const getAutoDeleteChatFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetAutoDeleteChatResponse>;"
+  },
+  {
+    "file": "getAutoReplyList.d.ts",
+    "signature": "export declare const getAutoReplyListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetAutoReplyListResponse>;"
+  },
+  {
+    "file": "getAvatarList.d.ts",
+    "signature": "export declare const getAvatarListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (count?: number, page?: number) => Promise<GetAvatarListResponse>;"
+  },
+  {
+    "file": "getAvatarUrlProfile.d.ts",
+    "signature": "export declare const getAvatarUrlProfileFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendIds: string | string[], avatarSize?: AvatarSize) => Promise<GetAvatarUrlProfileResponse>;"
+  },
+  {
+    "file": "getBizAccount.d.ts",
+    "signature": "export declare const getBizAccountFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<GetBizAccountResponse>;"
+  },
+  {
+    "file": "getCatalogList.d.ts",
+    "signature": "export declare const getCatalogListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload?: GetCatalogListPayload) => Promise<GetCatalogListResponse>;"
+  },
+  {
+    "file": "getCloseFriends.d.ts",
+    "signature": "export declare const getCloseFriendsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetCloseFriendsResponse>;"
+  },
+  {
+    "file": "getContext.d.ts",
+    "signature": "export declare const getContextFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => import(\"../context.js\").ContextSession;"
+  },
+  {
+    "file": "getCookie.d.ts",
+    "signature": "export declare const getCookieFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => import(\"tough-cookie\").CookieJar;"
+  },
+  {
+    "file": "getFriendBoardList.d.ts",
+    "signature": "export declare const getFriendBoardListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (conversationId: string) => Promise<GetFriendBoardListResponse>;"
+  },
+  {
+    "file": "getFriendOnlines.d.ts",
+    "signature": "export declare const getFriendOnlinesFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetFriendOnlinesResponse>;"
+  },
+  {
+    "file": "getFriendRecommendations.d.ts",
+    "signature": "export declare const getFriendRecommendationsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetFriendRecommendationsResponse>;"
+  },
+  {
+    "file": "getFriendRequestStatus.d.ts",
+    "signature": "export declare const getFriendRequestStatusFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<GetFriendRequestStatusResponse>;"
+  },
+  {
+    "file": "getFullAvatar.d.ts",
+    "signature": "export declare const getFullAvatarFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<GetFullAvatarResponse>;"
+  },
+  {
+    "file": "getGroupBlockedMember.d.ts",
+    "signature": "export declare const getGroupBlockedMemberFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: GetGroupBlockedMemberPayload, groupId: string) => Promise<GetGroupBlockedMemberResponse>;"
+  },
+  {
+    "file": "getGroupChatHistory.d.ts",
+    "signature": "export declare const getGroupChatHistoryFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string, count?: number) => Promise<GetGroupChatHistoryResponse>;"
+  },
+  {
+    "file": "getGroupInfo.d.ts",
+    "signature": "export declare const getGroupInfoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string | string[]) => Promise<GroupInfoResponse>;"
+  },
+  {
+    "file": "getGroupInviteBoxInfo.d.ts",
+    "signature": "export declare const getGroupInviteBoxInfoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: GetGroupInviteBoxInfoPayload) => Promise<GetGroupInviteBoxInfoResponse>;"
+  },
+  {
+    "file": "getGroupInviteBoxList.d.ts",
+    "signature": "export declare const getGroupInviteBoxListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload?: GetGroupInviteBoxListPayload) => Promise<GetGroupInviteBoxListResponse>;"
+  },
+  {
+    "file": "getGroupLinkDetail.d.ts",
+    "signature": "export declare const getGroupLinkDetailFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string) => Promise<GetGroupLinkDetailResponse>;"
+  },
+  {
+    "file": "getGroupLinkInfo.d.ts",
+    "signature": "export declare const getGroupLinkInfoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: GetGroupLinkInfoPayload) => Promise<GetGroupLinkInfoResponse>;"
+  },
+  {
+    "file": "getGroupMembersInfo.d.ts",
+    "signature": "export declare const getGroupMembersInfoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string | string[]) => Promise<GetGroupMembersInfoResponse>;"
+  },
+  {
+    "file": "getHiddenConversations.d.ts",
+    "signature": "export declare const getHiddenConversationsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetHiddenConversationsResponse>;"
+  },
+  {
+    "file": "getLabels.d.ts",
+    "signature": "export declare const getLabelsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetLabelsResponse>;"
+  },
+  {
+    "file": "getListBoard.d.ts",
+    "signature": "export declare const getListBoardFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: ListBoardOptions, groupId: string) => Promise<GetListBoardResponse>;"
+  },
+  {
+    "file": "getListReminder.d.ts",
+    "signature": "export declare const getListReminderFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: ListReminderOptions, threadId: string, type?: ThreadType) => Promise<GetListReminderResponse>;"
+  },
+  {
+    "file": "getMultiUsersByPhones.d.ts",
+    "signature": "export declare const getMultiUsersByPhonesFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (phoneNumbers: string | string[], avatarSize?: AvatarSize) => Promise<GetMultiUsersByPhonesResponse>;"
+  },
+  {
+    "file": "getMute.d.ts",
+    "signature": "export declare const getMuteFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetMuteResponse>;"
+  },
+  {
+    "file": "getOwnId.d.ts",
+    "signature": "export declare const getOwnIdFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => string;"
+  },
+  {
+    "file": "getPendingGroupMembers.d.ts",
+    "signature": "export declare const getPendingGroupMembersFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string) => Promise<GetPendingGroupMembersResponse>;"
+  },
+  {
+    "file": "getPinConversations.d.ts",
+    "signature": "export declare const getPinConversationsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetPinConversationsResponse>;"
+  },
+  {
+    "file": "getPollDetail.d.ts",
+    "signature": "export declare const getPollDetailFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (pollId: number) => Promise<PollDetail>;"
+  },
+  {
+    "file": "getProductCatalogList.d.ts",
+    "signature": "export declare const getProductCatalogListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: GetProductCatalogListPayload) => Promise<GetProductCatalogListResponse>;"
+  },
+  {
+    "file": "getQR.d.ts",
+    "signature": "export declare const getQRFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (userId: string | string[]) => Promise<GetQRResponse>;"
+  },
+  {
+    "file": "getQuickMessageList.d.ts",
+    "signature": "export declare const getQuickMessageListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetQuickMessageListResponse>;"
+  },
+  {
+    "file": "getRelatedFriendGroup.d.ts",
+    "signature": "export declare const getRelatedFriendGroupFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string | string[]) => Promise<GetRelatedFriendGroupResponse>;"
+  },
+  {
+    "file": "getReminder.d.ts",
+    "signature": "export declare const getReminderFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (reminderId: string) => Promise<ReminderGroup>;"
+  },
+  {
+    "file": "getReminderResponses.d.ts",
+    "signature": "export declare const getReminderResponsesFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (reminderId: string) => Promise<GetReminderResponsesResponse>;"
+  },
+  {
+    "file": "getSentFriendRequest.d.ts",
+    "signature": "export declare const getSentFriendRequestFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetSentFriendRequestResponse>;"
+  },
+  {
+    "file": "getSettings.d.ts",
+    "signature": "export declare const getSettingsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<UserSetting>;"
+  },
+  {
+    "file": "getStickerCategoryDetail.d.ts",
+    "signature": "export declare const getStickerCategoryDetailFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (cateId: number) => Promise<GetStickerCategoryDetailResponse>;"
+  },
+  {
+    "file": "getStickers.d.ts",
+    "signature": "export declare const getStickersFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (keyword: string) => Promise<number[]>;"
+  },
+  {
+    "file": "getStickersDetail.d.ts",
+    "signature": "export declare const getStickersDetailFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (stickerIds: number | number[]) => Promise<StickerDetailResponse>;"
+  },
+  {
+    "file": "getUnreadMark.d.ts",
+    "signature": "export declare const getUnreadMarkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<GetUnreadMarkResponse>;"
+  },
+  {
+    "file": "getUserInfo.d.ts",
+    "signature": "export declare const getUserInfoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (userId: string | string[], avatarSize?: AvatarSize) => Promise<UserInfoResponse>;"
+  },
+  {
+    "file": "inviteUserToGroups.d.ts",
+    "signature": "export declare const inviteUserToGroupsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (userId: string, groupId: string | string[]) => Promise<InviteUserToGroupsResponse>;"
+  },
+  {
+    "file": "joinGroupInviteBox.d.ts",
+    "signature": "export declare const joinGroupInviteBoxFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "joinGroupLink.d.ts",
+    "signature": "export declare const joinGroupLinkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (link: string) => Promise<\"\">;"
+  },
+  {
+    "file": "keepAlive.d.ts",
+    "signature": "export declare const keepAliveFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<KeepAliveResponse>;"
+  },
+  {
+    "file": "lastOnline.d.ts",
+    "signature": "export declare const lastOnlineFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (uid: string) => Promise<LastOnlineResponse>;"
+  },
+  {
+    "file": "leaveGroup.d.ts",
+    "signature": "export declare const leaveGroupFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string, silent?: boolean) => Promise<LeaveGroupResponse>;"
+  },
+  {
+    "file": "lockPoll.d.ts",
+    "signature": "export declare const lockPollFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (pollId: number) => Promise<\"\">;"
+  },
+  {
+    "file": "parseLink.d.ts",
+    "signature": "export declare const parseLinkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (link: string) => Promise<ParseLinkResponse>;"
+  },
+  {
+    "file": "rejectFriendRequest.d.ts",
+    "signature": "export declare const rejectFriendRequestFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "removeFriend.d.ts",
+    "signature": "export declare const removeFriendFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "removeFriendAlias.d.ts",
+    "signature": "export declare const removeFriendAliasFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "removeGroupBlockedMember.d.ts",
+    "signature": "export declare const removeGroupBlockedMemberFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string | string[], groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "removeGroupDeputy.d.ts",
+    "signature": "export declare const removeGroupDeputyFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string | string[], groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "removeQuickMessage.d.ts",
+    "signature": "export declare const removeQuickMessageFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (itemIds: number | number[]) => Promise<RemoveQuickMessageResponse>;"
+  },
+  {
+    "file": "removeReminder.d.ts",
+    "signature": "export declare const removeReminderFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (reminderId: string, threadId: string, type?: ThreadType) => Promise<RemoveReminderResponse>;"
+  },
+  {
+    "file": "removeUnreadMark.d.ts",
+    "signature": "export declare const removeUnreadMarkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (threadId: string, type?: ThreadType) => Promise<RemoveUnreadMarkResponse>;"
+  },
+  {
+    "file": "removeUserFromGroup.d.ts",
+    "signature": "export declare const removeUserFromGroupFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (memberId: string | string[], groupId: string) => Promise<RemoveUserFromGroupResponse>;"
+  },
+  {
+    "file": "resetHiddenConversPin.d.ts",
+    "signature": "export declare const resetHiddenConversPinFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => () => Promise<\"\">;"
+  },
+  {
+    "file": "reuseAvatar.d.ts",
+    "signature": "export declare const reuseAvatarFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (photoId: string) => Promise<null>;"
+  },
+  {
+    "file": "reviewPendingMemberRequest.d.ts",
+    "signature": "export declare const reviewPendingMemberRequestFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: ReviewPendingMemberRequestPayload, groupId: string) => Promise<ReviewPendingMemberRequestResponse>;"
+  },
+  {
+    "file": "searchSticker.d.ts",
+    "signature": "export declare const searchStickerFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (keyword: string, limit?: number) => Promise<SearchStickerResponse>;"
+  },
+  {
+    "file": "sendBankCard.d.ts",
+    "signature": "export declare const sendBankCardFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: SendBankCardPayload, threadId: string, type?: ThreadType) => Promise<\"\">;"
+  },
+  {
+    "file": "sendCard.d.ts",
+    "signature": "export declare const sendCardFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: SendCardOptions, threadId: string, type?: ThreadType) => Promise<SendCardResponse>;"
+  },
+  {
+    "file": "sendDeliveredEvent.d.ts",
+    "signature": "export declare const sendDeliveredEventFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (isSeen: boolean, messages: SendDeliveredEventMessageParams | SendDeliveredEventMessageParams[], type?: ThreadType) => Promise<SendDeliveredEventResponse>;"
+  },
+  {
+    "file": "sendFriendRequest.d.ts",
+    "signature": "export declare const sendFriendRequestFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (msg: string, userId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "sendLink.d.ts",
+    "signature": "export declare const sendLinkFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: SendLinkOptions, threadId: string, type?: ThreadType) => Promise<SendLinkResponse>;"
+  },
+  {
+    "file": "sendMessage.d.ts",
+    "signature": "export declare const sendMessageFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (message: MessageContent | string, threadId: string, type?: ThreadType) => Promise<{"
+  },
+  {
+    "file": "sendReport.d.ts",
+    "signature": "export declare const sendReportFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: SendReportOptions, threadId: string, type?: ThreadType) => Promise<SendReportResponse>;"
+  },
+  {
+    "file": "sendSeenEvent.d.ts",
+    "signature": "export declare const sendSeenEventFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (messages: SendSeenEventMessageParams | SendSeenEventMessageParams[], type?: ThreadType) => Promise<SendSeenEventResponse>;"
+  },
+  {
+    "file": "sendSticker.d.ts",
+    "signature": "export declare const sendStickerFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (sticker: SendStickerPayload, threadId: string, type?: ThreadType) => Promise<SendStickerResponse>;"
+  },
+  {
+    "file": "sendTypingEvent.d.ts",
+    "signature": "export declare const sendTypingEventFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (threadId: string, type?: ThreadType, destType?: DestType) => Promise<SendTypingEventResponse>;"
+  },
+  {
+    "file": "sendVideo.d.ts",
+    "signature": "export declare const sendVideoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: SendVideoOptions, threadId: string, type?: ThreadType) => Promise<SendVideoResponse>;"
+  },
+  {
+    "file": "sendVoice.d.ts",
+    "signature": "export declare const sendVoiceFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: SendVoiceOptions, threadId: string, type?: ThreadType) => Promise<SendVoiceResponse>;"
+  },
+  {
+    "file": "setHiddenConversations.d.ts",
+    "signature": "export declare const setHiddenConversationsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (hidden: boolean, threadId: string | string[], type?: ThreadType) => Promise<\"\">;"
+  },
+  {
+    "file": "setMute.d.ts",
+    "signature": "export declare const setMuteFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (params: SetMuteParams | undefined, threadID: string, type?: ThreadType) => Promise<\"\">;"
+  },
+  {
+    "file": "setPinnedConversations.d.ts",
+    "signature": "export declare const setPinnedConversationsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (pinned: boolean, threadId: string | string[], type?: ThreadType) => Promise<\"\">;"
+  },
+  {
+    "file": "sharePoll.d.ts",
+    "signature": "export declare const sharePollFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (pollId: number) => Promise<\"\">;"
+  },
+  {
+    "file": "unblockUser.d.ts",
+    "signature": "export declare const unblockUserFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (userId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "undo.d.ts",
+    "signature": "export declare const undoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: UndoPayload, threadId: string, type?: ThreadType) => Promise<UndoResponse>;"
+  },
+  {
+    "file": "undoFriendRequest.d.ts",
+    "signature": "export declare const undoFriendRequestFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (friendId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "updateActiveStatus.d.ts",
+    "signature": "export declare const updateActiveStatusFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (active: boolean) => Promise<UpdateActiveStatusResponse>;"
+  },
+  {
+    "file": "updateArchivedChatList.d.ts",
+    "signature": "export declare const updateArchivedChatListFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (isArchived: boolean, conversations: UpdateArchivedChatListTarget | UpdateArchivedChatListTarget[]) => Promise<UpdateArchivedChatListResponse>;"
+  },
+  {
+    "file": "updateAutoDeleteChat.d.ts",
+    "signature": "export declare const updateAutoDeleteChatFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (ttl: ChatTTL, threadId: string, type?: ThreadType) => Promise<\"\">;"
+  },
+  {
+    "file": "updateAutoReply.d.ts",
+    "signature": "export declare const updateAutoReplyFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: UpdateAutoReplyPayload) => Promise<UpdateAutoReplyResponse>;"
+  },
+  {
+    "file": "updateCatalog.d.ts",
+    "signature": "export declare const updateCatalogFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: UpdateCatalogPayload) => Promise<UpdateCatalogResponse>;"
+  },
+  {
+    "file": "updateGroupSettings.d.ts",
+    "signature": "export declare const updateGroupSettingsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (options: UpdateGroupSettingsOptions, groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "updateHiddenConversPin.d.ts",
+    "signature": "export declare const updateHiddenConversPinFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (pin: string) => Promise<\"\">;"
+  },
+  {
+    "file": "updateLabels.d.ts",
+    "signature": "export declare const updateLabelsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: UpdateLabelsPayload) => Promise<{"
+  },
+  {
+    "file": "updateLang.d.ts",
+    "signature": "export declare const updateLangFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (language?: UpdateLangAvailableLanguages) => Promise<\"\">;"
+  },
+  {
+    "file": "updateProductCatalog.d.ts",
+    "signature": "export declare const updateProductCatalogFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: UpdateProductCatalogPayload) => Promise<UpdateProductCatalogResponse>;"
+  },
+  {
+    "file": "updateProfile.d.ts",
+    "signature": "export declare const updateProfileFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: UpdateProfilePayload) => Promise<\"\">;"
+  },
+  {
+    "file": "updateProfileBio.d.ts",
+    "signature": "export declare const updateProfileBioFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (status: string) => Promise<\"\">;"
+  },
+  {
+    "file": "updateQuickMessage.d.ts",
+    "signature": "export declare const updateQuickMessageFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (updatePayload: UpdateQuickMessagePayload, itemId: number) => Promise<UpdateQuickMessageResponse>;"
+  },
+  {
+    "file": "updateSettings.d.ts",
+    "signature": "export declare const updateSettingsFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (type: UpdateSettingsType, value: number) => Promise<\"\">;"
+  },
+  {
+    "file": "upgradeGroupToCommunity.d.ts",
+    "signature": "export declare const upgradeGroupToCommunityFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (groupId: string) => Promise<\"\">;"
+  },
+  {
+    "file": "uploadAttachment.d.ts",
+    "signature": "export declare const uploadAttachmentFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (sources: AttachmentSource | AttachmentSource[], threadId: string, type?: ThreadType) => Promise<UploadAttachmentType[]>;"
+  },
+  {
+    "file": "uploadProductPhoto.d.ts",
+    "signature": "export declare const uploadProductPhotoFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (payload: UploadProductPhotoPayload) => Promise<UploadProductPhotoResponse>;"
+  },
+  {
+    "file": "votePoll.d.ts",
+    "signature": "export declare const votePollFactory: (ctx: import(\"../context.js\").ContextBase, api: import(\"../apis.js\").API) => (pollId: number, optionId: number | number[]) => Promise<VotePollResponse>;"
+  }
+]
