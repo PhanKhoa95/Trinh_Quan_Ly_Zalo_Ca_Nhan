@@ -1,6 +1,6 @@
 {
   "message": {
-    "successes": 196,
+    "successes": 197,
     "errors": 1
   },
   "sendMessage": {
@@ -12,7 +12,7 @@
     "errors": 0
   },
   "undo": {
-    "successes": 5,
+    "successes": 6,
     "errors": 0
   },
   "saveMemberMemory": {
