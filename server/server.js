@@ -1438,7 +1438,7 @@ app.post('/api/ai/config/test', async (req, res) => {
             }
         }
 
-        if (!keyToUse) {
+        if (!keyToUse && aiProvider !== 'ollama-online') {
             return res.status(400).json({ success: false, error: 'Thiếu API Key' });
         }
 
