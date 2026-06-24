@@ -1009,6 +1009,7 @@
                                                         <option value="anthropic">Anthropic (Claude)</option>
                                                         <option value="deepseek">DeepSeek</option>
                                                         <option value="ollama">Ollama (Local AI)</option>
+                                                        <option value="ollama-online">Ollama Online (Cloud)</option>
                                                     </select>
                                                 </div>
                                                 <div class="flex-grow" style="flex:1; display:flex; flex-direction:column; gap:4px;">
@@ -1023,6 +1024,24 @@
                                             <div class="form-group" id="ollama-url-container" style="display:none; margin-bottom: 15px;">
                                                 <label for="ai-ollama-url">Ollama Server URL</label>
                                                 <input type="text" class="input-control" id="ai-ollama-url" value="http://localhost:11434" placeholder="Ví dụ: http://localhost:11434" style="width:100%;">
+                                            </div>
+
+                                            <div class="form-group" id="ollama-online-config-container" style="display:none; margin-bottom: 15px;">
+                                                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                                    <div style="flex:2; min-width:200px;">
+                                                        <label for="ai-ollama-online-url">🌐 Ollama Online Server URL</label>
+                                                        <input type="text" class="input-control" id="ai-ollama-online-url" value="" placeholder="Ví dụ: https://your-ollama-server.com" style="width:100%;">
+                                                        <small style="color:var(--text-secondary); font-size:0.7rem;">Nhập URL của server Ollama trên cloud/VPS</small>
+                                                    </div>
+                                                    <div style="flex:1; min-width:150px;">
+                                                        <label for="ai-ollama-online-api-mode">Chế độ API</label>
+                                                        <select class="select-control" id="ai-ollama-online-api-mode" style="width:100%;">
+                                                            <option value="openai-compat">OpenAI Compatible</option>
+                                                            <option value="native">Ollama Native</option>
+                                                        </select>
+                                                        <small style="color:var(--text-secondary); font-size:0.7rem;">Hầu hết cloud dùng OpenAI Compatible</small>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div class="form-group" style="margin-bottom: 15px;">

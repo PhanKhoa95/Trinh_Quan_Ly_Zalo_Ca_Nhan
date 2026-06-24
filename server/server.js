@@ -1079,7 +1079,7 @@ app.post('/api/broadcast', async (req, res) => {
 
 // Lấy danh sách Model thực tế từ API nhà cung cấp (Tự động cập nhật)
 app.get('/api/ai/models', async (req, res) => {
-    let { provider, apiKey, ollamaUrl } = req.query;
+    let { provider, apiKey, ollamaUrl, ollamaOnlineUrl } = req.query;
     try {
         let models = [];
         
@@ -1137,6 +1137,41 @@ app.get('/api/ai/models', async (req, res) => {
                 models = json.models.map(m => m.name).sort();
             } else {
                 throw new Error(`HTTP ${response.status}`);
+            }
+        } else if (provider === 'ollama-online') {
+            const url = ollamaOnlineUrl || '';
+            if (!url) return res.json({ success: true, data: [] });
+            const headers = {};
+            if (!isMaskedOrEmpty(apiKey)) {
+                headers['Authorization'] = `Bearer ${apiKey}`;
+            } else {
+                // Lấy key từ DB
+                const config = await aiSettingsDb.findOne({});
+                if (config && config.aiApiKeyPool && config.aiApiKeyPool['ollama-online']) {
+                    const poolKey = config.aiApiKeyPool['ollama-online'][0];
+                    if (poolKey) headers['Authorization'] = `Bearer ${poolKey}`;
+                }
+            }
+            // Thử OpenAI-compatible endpoint trước
+            try {
+                const response = await fetch(`${url.replace(/\/+$/, '')}/v1/models`, { headers });
+                if (response.ok) {
+                    const json = await response.json();
+                    models = json.data ? json.data.map(m => m.id).sort() : [];
+                } else {
+                    throw new Error('openai-compat failed');
+                }
+            } catch {
+                // Fallback: Ollama native endpoint
+                try {
+                    const response2 = await fetch(`${url.replace(/\/+$/, '')}/api/tags`, { headers });
+                    if (response2.ok) {
+                        const json2 = await response2.json();
+                        models = json2.models ? json2.models.map(m => m.name).sort() : [];
+                    }
+                } catch (e2) {
+                    throw new Error(`Không thể kết nối Ollama Online: ${e2.message}`);
+                }
             }
         } else if (provider === 'anthropic') {
             if (isMaskedOrEmpty(apiKey)) return res.json({ success: true, data: [] });
@@ -1218,7 +1253,8 @@ app.get('/api/ai/config', async (req, res) => {
                 gemini: config.aiProvider === 'gemini' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
                 anthropic: config.aiProvider === 'anthropic' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
                 deepseek: config.aiProvider === 'deepseek' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
-                ollama: []
+                ollama: [],
+                'ollama-online': []
             };
 
         // Mask all keys in the pool object
@@ -1267,6 +1303,7 @@ app.post('/api/ai/config', async (req, res) => {
         globalHostGroupId,
         aiTemperature, aiTopP, aiMaxTokens, aiFrequencyPenalty, aiPresencePenalty, aiSafetySettings,
         aiTopK, aiReasoningEffort, aiOllamaUrl,
+        aiOllamaOnlineUrl, aiOllamaOnlineApiMode,
         aiAllProviderKeys,
         aiEnableImageGen, aiEnableWebSearch, aiEnableVideoAnalysis,
         aiReactionProbability
@@ -1280,14 +1317,15 @@ app.post('/api/ai/config', async (req, res) => {
                 gemini: currentConfig.aiProvider === 'gemini' && Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : [],
                 anthropic: currentConfig.aiProvider === 'anthropic' && Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : [],
                 deepseek: currentConfig.aiProvider === 'deepseek' && Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : [],
-                ollama: []
+                ollama: [],
+                'ollama-online': []
             };
 
         // Parse and unmask keys for each provider
         const savedPoolObj = {};
         const incomingAllKeys = aiAllProviderKeys || {};
 
-        const providersList = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama'];
+        const providersList = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama', 'ollama-online'];
         providersList.forEach(p => {
             let incomingKeys = incomingAllKeys[p];
             if (incomingKeys === undefined) {
@@ -1351,6 +1389,8 @@ app.post('/api/ai/config', async (req, res) => {
             aiTopK: isNaN(parseInt(aiTopK)) ? 40 : parseInt(aiTopK),
             aiReasoningEffort: aiReasoningEffort || 'medium',
             aiOllamaUrl: aiOllamaUrl || 'http://localhost:11434',
+            aiOllamaOnlineUrl: aiOllamaOnlineUrl || '',
+            aiOllamaOnlineApiMode: aiOllamaOnlineApiMode || 'openai-compat',
             updatedAt: new Date()
         };
         await aiSettingsDb.update({}, record, { upsert: true });
