@@ -261,10 +261,26 @@ app.post('/api/accounts/remove', async (req, res) => {
         const session = await sessionsDb.findOne({ id: accountId });
         if (session) {
             await sessionsDb.remove({ id: accountId });
+            
+            // Xóa file session vật lý trên ổ đĩa
+            if (session.sessionFile) {
+                const sessionPath = path.join(__dirname, 'sessions', session.sessionFile);
+                if (fs.existsSync(sessionPath)) {
+                    try {
+                        fs.unlinkSync(sessionPath);
+                        console.log(`Server: Đã xóa file session vật lý thành công: ${session.sessionFile}`);
+                    } catch (fsErr) {
+                        console.error(`Server Error: Không thể xóa file session ${session.sessionFile}:`, fsErr.message);
+                    }
+                }
+            }
+
             // Nếu client đang online, đóng kết nối
             if (activeClients[accountId]) {
-                if (activeClients[accountId].client) {
-                    await activeClients[accountId].client.destroy();
+                try {
+                    await activeClients[accountId].destroy();
+                } catch (destroyErr) {
+                    console.error(`Server Error: Lỗi khi gọi destroy cho client ${accountId}:`, destroyErr.message);
                 }
                 delete activeClients[accountId];
             }
