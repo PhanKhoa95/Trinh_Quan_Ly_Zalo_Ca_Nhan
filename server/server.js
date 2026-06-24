@@ -1981,33 +1981,58 @@ app.get('/api/members', async (req, res) => {
             ];
         }
         
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        const take = parseInt(limit);
-        
-        const total = await prisma.member.count({ where });
+        // Lấy tất cả thành viên khớp với điều kiện
         const members = await prisma.member.findMany({
             where,
-            skip,
-            take,
             include: { _count: { select: { memories: true } } },
             orderBy: { updatedAt: 'desc' }
         });
         
-        const data = members.map(m => ({
-            id: m.id,
-            groupId: m.groupId,
-            zaloId: m.zaloId,
-            name: m.name,
-            phone: m.phone || '',
-            vipStatus: m.vipStatus,
-            notes: m.notes || '',
-            xungHo: m.xungHo || '',
-            avatar: m.avatar || '',
-            lastSentiment: m.lastSentiment || 'Bình thường',
-            memoriesCount: m._count ? m._count.memories : 0
-        }));
+        // Nhóm các thành viên theo zaloId
+        const grouped = {};
+        members.forEach(m => {
+            const zId = m.zaloId;
+            if (!grouped[zId]) {
+                grouped[zId] = {
+                    id: m.id, // ID đại diện
+                    zaloId: zId,
+                    name: m.name,
+                    phone: m.phone || '',
+                    vipStatus: m.vipStatus,
+                    notes: m.notes || '',
+                    xungHo: m.xungHo || '',
+                    avatar: m.avatar || '',
+                    lastSentiment: m.lastSentiment || 'Bình thường',
+                    memoriesCount: 0,
+                    groups: []
+                };
+            }
+            
+            // Thêm thông tin nhóm
+            grouped[zId].groups.push({
+                groupId: m.groupId,
+                memoriesCount: m._count ? m._count.memories : 0
+            });
+            
+            // Cộng dồn số lượng trí nhớ
+            grouped[zId].memoriesCount += m._count ? m._count.memories : 0;
+            
+            // Ưu tiên các trường thông tin không rỗng
+            if (m.phone && !grouped[zId].phone) grouped[zId].phone = m.phone;
+            if (m.notes && !grouped[zId].notes) grouped[zId].notes = m.notes;
+            if (m.xungHo && !grouped[zId].xungHo) grouped[zId].xungHo = m.xungHo;
+            if (m.avatar && !grouped[zId].avatar) grouped[zId].avatar = m.avatar;
+        });
         
-        res.json({ success: true, total, page: parseInt(page), limit: parseInt(limit), data });
+        const groupedList = Object.values(grouped);
+        const total = groupedList.length;
+        
+        // Phân trang
+        const pageInt = parseInt(page);
+        const limitInt = parseInt(limit);
+        const paginatedData = groupedList.slice((pageInt - 1) * limitInt, pageInt * limitInt);
+        
+        res.json({ success: true, total, page: pageInt, limit: limitInt, data: paginatedData });
     } catch (error) {
         console.error('Lỗi khi lấy danh sách thành viên:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -2061,6 +2086,22 @@ app.post('/api/members/update', async (req, res) => {
             where: { id: memberId }
         });
         
+        // Cập nhật đồng bộ trên tất cả các nhóm của khách hàng này (zaloId)
+        const targetZaloId = zaloId || (oldMember ? oldMember.zaloId : (memberId ? memberId.split('-')[1] : null));
+        if (targetZaloId) {
+            await prisma.member.updateMany({
+                where: { zaloId: targetZaloId },
+                data: {
+                    name,
+                    phone: phone || null,
+                    vipStatus: vipStatus || 'normal',
+                    notes: notes || null,
+                    xungHo: xungHo || null,
+                    lastSentiment: lastSentiment || 'Bình thường'
+                }
+            });
+        }
+
         const updated = await prisma.member.update({
             where: { id: memberId },
             data: {
@@ -2130,8 +2171,12 @@ app.get('/api/members/:groupId/:zaloId/memories', async (req, res) => {
     const { groupId, zaloId } = req.params;
     try {
         const { prisma } = require('./database');
+        const where = { zaloId };
+        if (groupId !== 'all') {
+            where.groupId = groupId;
+        }
         const memories = await prisma.memberMemory.findMany({
-            where: { groupId, zaloId },
+            where,
             orderBy: { createdAt: 'desc' }
         });
         res.json({ success: true, data: memories });
