@@ -81,6 +81,8 @@ model AiSetting {
   aiTopK             Int      @default(40)
   aiReasoningEffort  String   @default("medium")
   aiOllamaUrl        String   @default("http://localhost:11434")
+  aiOllamaOnlineUrl  String   @default("")
+  aiOllamaOnlineApiMode String @default("openai-compat")
   aiEnableImageGen   Boolean  @default(false)
   aiEnableWebSearch  Boolean  @default(false)
   aiEnableVideoAnalysis Boolean @default(false)
