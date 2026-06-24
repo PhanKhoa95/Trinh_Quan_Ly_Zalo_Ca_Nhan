@@ -3203,7 +3203,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const OLLAMA_ONLINE_MODELS = [
-        { value: 'llama3', text: 'llama3 (Mặc định)' },
+        { value: 'gemma4', text: 'gemma4 (Google - Rất mạnh 🔥)' },
+        { value: 'llama3', text: 'llama3 (Meta - Phổ biến)' },
         { value: 'llama3.1', text: 'llama3.1 (Nâng cấp mới)' },
         { value: 'llama3.2', text: 'llama3.2 (Mới nhất)' },
         { value: 'mistral', text: 'mistral (Thông minh & Gọn nhẹ)' },
