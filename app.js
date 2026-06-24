@@ -52,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // LocalStorage loading (lọc sạch dữ liệu demo trước đó nếu có)
     let accounts = (JSON.parse(localStorage.getItem('zalo_accounts')) || defaultAccounts).filter(a => a.name && !a.name.includes('(Demo)'));
     let groups = (JSON.parse(localStorage.getItem('zalo_groups')) || defaultGroups).filter(g => g.name && !g.name.includes('Marketing UEH') && !g.name.includes('AI & Automation') && !g.name.includes('CRM Demo') && !g.name.includes('Matrix') && !g.name.includes('VIP Business') && !g.name.includes('Cựu Sinh Viên') && !g.name.includes('Bản tin') && !g.name.includes('Học Tập Cục Bộ'));
+    // Dọn dẹp nhóm của các tài khoản không còn tồn tại
+    groups = groups.filter(g => accounts.some(a => a.id === g.accountId));
     let rules = (JSON.parse(localStorage.getItem('zalo_rules')) || defaultRules).filter(r => r.reply && !r.reply.includes('Zalo CRM') && !r.reply.includes('ZaloGroup'));
     let campaigns = JSON.parse(localStorage.getItem('zalo_campaigns')) || [];
     let knowledge = [];
@@ -413,6 +415,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const json = await res.json();
             if (json.success) {
                 accounts = json.data;
+                // Dọn dẹp nhóm của các tài khoản không còn tồn tại
+                groups = groups.filter(g => accounts.some(a => a.id === g.accountId));
                 saveState();
                 if (activeTab === 'accounts') renderAccounts();
                 updateGlobalBadges();
@@ -676,6 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (confirm(`Bạn có chắc chắn muốn gỡ tài khoản Zalo: ${acc.name}?`)) {
                     if (currentAppMode === 'simulation') {
                         accounts = accounts.filter(a => a.id !== id);
+                        groups = groups.filter(g => accounts.some(a => a.id === g.accountId));
                         addTerminalLog(`Đã xóa tài khoản Zalo: ${acc.name} khỏi hệ thống.`, 'warn');
                         saveState();
                         renderAccounts();
@@ -796,6 +801,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 10. GROUPS MANAGEMENT PAGE
     // -------------------------------------------------------------
     async function renderGroups() {
+        // Dọn dẹp nhóm của các tài khoản không còn tồn tại
+        groups = groups.filter(g => accounts.some(a => a.id === g.accountId));
+        
         groupsList.innerHTML = '';
         const searchQuery = groupSearchInput.value.toLowerCase();
         const accountFilter = groupAccountFilter.value;
