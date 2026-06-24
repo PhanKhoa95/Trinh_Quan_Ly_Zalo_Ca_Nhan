@@ -5449,6 +5449,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!customerMemoriesListContainer) return;
         customerMemoriesListContainer.innerHTML = '<div class="text-center text-muted p-10">Đang tải trí nhớ AI...</div>';
 
+        // Ẩn form thêm ghi nhớ nếu xem Tất cả (do không xác định được nhóm cụ thể để gán)
+        if (groupId === 'all') {
+            if (customerAddMemoryForm) customerAddMemoryForm.style.display = 'none';
+        } else {
+            if (customerAddMemoryForm) customerAddMemoryForm.style.display = 'flex';
+        }
+
         let memories = [];
         if (currentAppMode === 'live') {
             try {
@@ -5465,8 +5472,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Mock memories
             memories = [
-                { id: 'm1', fact: 'Khách hàng quan tâm đến khóa học Zalo Automation.', importance: 3, createdAt: new Date() },
-                { id: 'm2', fact: 'Thường nhắn tin hỏi giá vào buổi tối.', importance: 1, createdAt: new Date() }
+                { id: 'm1', groupId: 'g1', fact: 'Khách hàng quan tâm đến khóa học Zalo Automation.', importance: 3, createdAt: new Date() },
+                { id: 'm2', groupId: 'g2', fact: 'Thường nhắn tin hỏi giá vào buổi tối.', importance: 1, createdAt: new Date() }
             ];
         }
 
@@ -5484,19 +5491,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mem.importance === 3) impText = 'Quan trọng';
             if (mem.importance === 5) impText = 'VIP';
 
+            // Vẽ badge tên nhóm nếu đang xem tab Tất cả
+            let groupBadge = '';
+            if (groupId === 'all') {
+                const g = groups.find(g => g.id === mem.groupId);
+                const gName = g ? g.name : 'Nhóm Zalo';
+                groupBadge = `<span class="badge" style="background:rgba(255,255,255,0.08); font-size:0.65rem; color:var(--text-muted); margin-right:8px; padding: 2px 6px;">${gName}</span>`;
+            }
+
             item.innerHTML = `
-                <span class="customer-memory-text">${escapeHtml(mem.fact)}</span>
+                <div style="flex-grow:1; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                    ${groupBadge}
+                    <span class="customer-memory-text">${escapeHtml(mem.fact)}</span>
+                </div>
                 <span class="customer-memory-importance importance-${mem.importance || 3}">${impText}</span>
                 <button type="button" class="customer-memory-delete-btn" data-id="${mem.id}" title="Xóa ghi nhớ này">
                     <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
                 </button>
             `;
 
+            const targetGroupId = groupId === 'all' ? mem.groupId : groupId;
+
             item.querySelector('.customer-memory-delete-btn').addEventListener('click', async () => {
                 if (confirm('Bạn có chắc chắn muốn xóa ghi nhớ AI này?')) {
                     if (currentAppMode === 'live') {
                         try {
-                            const res = await fetch(`${BACKEND_URL}/api/members/${groupId}/${zaloId}/memories/${mem.id}`, {
+                            const res = await fetch(`${BACKEND_URL}/api/members/${targetGroupId}/${zaloId}/memories/${mem.id}`, {
                                 method: 'DELETE'
                             });
                             const json = await res.json();
