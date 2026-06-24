@@ -5306,7 +5306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         membersData.forEach(member => {
             const card = document.createElement('div');
-            card.className = `customer-item-card ${selectedCustomer && selectedCustomer.id === member.id ? 'active' : ''}`;
+            card.className = `customer-item-card ${selectedCustomer && selectedCustomer.zaloId === member.zaloId ? 'active' : ''}`;
             
             let vipBadge = '<span class="badge badge-normal">Normal</span>';
             if (member.vipStatus === 'vip') {
@@ -5315,9 +5315,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 vipBadge = '<span class="badge badge-blacklist">Blacklist 🚫</span>';
             }
 
-            // Get group name from groups state
-            const grp = groups.find(g => g.id === member.groupId);
-            const groupName = grp ? grp.name : 'Nhóm Zalo';
+            // Hiển thị tên các nhóm tham gia
+            let groupText = '';
+            if (member.groups && member.groups.length > 0) {
+                const groupNames = member.groups.map(mg => {
+                    const g = groups.find(g => g.id === mg.groupId);
+                    return g ? g.name : 'Nhóm Zalo';
+                });
+                if (groupNames.length === 1) {
+                    groupText = groupNames[0];
+                } else {
+                    groupText = `${groupNames[0]} (+${groupNames.length - 1} nhóm)`;
+                }
+            } else {
+                groupText = 'Không rõ nhóm';
+            }
 
             card.innerHTML = `
                 <img src="${member.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}" class="customer-item-avatar" onerror="handleAvatarError(this)">
@@ -5325,7 +5337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="customer-item-name" title="${member.name}">${member.name}</span>
                     <div class="customer-item-meta">
                         ${vipBadge}
-                        <span title="${groupName}" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${groupName}</span>
+                        <span title="${groupText}" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${groupText}</span>
                     </div>
                 </div>
                 <div class="flex-column align-items-end" style="gap:2px; display:flex; justify-content:center;">
@@ -5357,7 +5369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Populate fields
         document.getElementById('customer-detail-id').value = member.id;
-        document.getElementById('customer-detail-group-id').value = member.groupId;
+        document.getElementById('customer-detail-group-id').value = member.groups && member.groups.length > 0 ? member.groups[0].groupId : '';
         document.getElementById('customer-detail-zalo-id').value = member.zaloId;
         document.getElementById('customer-detail-name').textContent = member.name;
         document.getElementById('customer-edit-name').value = member.name;
@@ -5379,13 +5391,58 @@ document.addEventListener('DOMContentLoaded', () => {
             badge.textContent = (member.vipStatus || 'normal').toUpperCase();
         }
 
-        // Group name
-        const grp = groups.find(g => g.id === member.groupId);
-        const groupName = grp ? grp.name : 'Nhóm Zalo';
-        document.getElementById('customer-detail-group-name').textContent = `Nhóm: ${groupName}`;
+        // Hiển thị tên các nhóm tham gia
+        const groupNames = (member.groups || []).map(mg => {
+            const g = groups.find(g => g.id === mg.groupId);
+            return g ? g.name : 'Nhóm Zalo';
+        });
+        document.getElementById('customer-detail-group-name').textContent = `Nhóm: ${groupNames.join(', ')}`;
 
-        // Load memories
-        await loadCustomerMemories(member.groupId, member.zaloId);
+        // Tạo động các tab phân loại nhóm cho trí nhớ
+        const tabsContainer = document.getElementById('customer-memory-tabs');
+        if (tabsContainer) {
+            tabsContainer.innerHTML = '';
+            
+            if (member.groups && member.groups.length > 0) {
+                // Thêm tab "Tất cả"
+                const allTab = document.createElement('button');
+                allTab.className = 'btn btn-secondary btn-sm active';
+                allTab.style.padding = '4px 10px';
+                allTab.style.fontSize = '0.75rem';
+                allTab.textContent = 'Tất cả';
+                allTab.type = 'button';
+                allTab.addEventListener('click', () => {
+                    tabsContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    allTab.classList.add('active');
+                    loadCustomerMemories('all', member.zaloId);
+                });
+                tabsContainer.appendChild(allTab);
+                
+                // Thêm tab cho từng nhóm
+                member.groups.forEach(mg => {
+                    const g = groups.find(g => g.id === mg.groupId);
+                    const name = g ? g.name : 'Nhóm Zalo';
+                    
+                    const tabBtn = document.createElement('button');
+                    tabBtn.className = 'btn btn-secondary btn-sm';
+                    tabBtn.style.padding = '4px 10px';
+                    tabBtn.style.fontSize = '0.75rem';
+                    tabBtn.textContent = name;
+                    tabBtn.type = 'button';
+                    tabBtn.addEventListener('click', () => {
+                        tabsContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                        tabBtn.classList.add('active');
+                        // Cập nhật groupId ẩn
+                        document.getElementById('customer-detail-group-id').value = mg.groupId;
+                        loadCustomerMemories(mg.groupId, member.zaloId);
+                    });
+                    tabsContainer.appendChild(tabBtn);
+                });
+            }
+        }
+
+        // Mặc định load tất cả trí nhớ
+        await loadCustomerMemories('all', member.zaloId);
     }
 
     async function loadCustomerMemories(groupId, zaloId) {
