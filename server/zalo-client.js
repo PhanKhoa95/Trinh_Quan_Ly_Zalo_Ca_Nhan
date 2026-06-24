@@ -487,12 +487,16 @@ class ZaloClientWrapper {
 
         if (textContent && !isDuplicate) {
             const ts = message.data.ts ? parseInt(message.data.ts) : Date.now();
+            const msgId = message.data.msgId ? String(message.data.msgId) : undefined;
+            const cliMsgId = message.data.cliMsgId ? String(message.data.cliMsgId) : undefined;
             if (isSelf) {
                 // Tin nhắn của chính bot
                 conversationHistory[groupId].push({
                     role: 'assistant',
                     content: textContent,
-                    timestamp: ts
+                    timestamp: ts,
+                    msgId,
+                    cliMsgId
                 });
             } else {
                 // Tin nhắn của thành viên khác, lấy tên người gửi
@@ -502,7 +506,9 @@ class ZaloClientWrapper {
                     content: `${senderName}: ${textContent}`,
                     timestamp: ts,
                     senderId: String(message.data.uidFrom),
-                    senderName: senderName
+                    senderName: senderName,
+                    msgId,
+                    cliMsgId
                 });
             }
 
@@ -1192,7 +1198,18 @@ class ZaloClientWrapper {
                                 console.error('Lỗi lấy mục tiêu nhóm:', err.message);
                             }
 
-                            const dynamicContext = `Bối cảnh hội thoại:\n- Bạn đang hoạt động trong nhóm chat Zalo có tên là "${groupName}" (ID của nhóm này là "${groupId}").\n- Bạn tên là "${botName}" (đây là tài khoản Zalo của bạn).\n- Thành viên kích hoạt bạn hiện tại là "${senderName}".\n- Khi trả lời, hãy BẮT BUỘC xưng hô và gọi đối phương là "${pronoun}" (ví dụ: "Chào ${pronoun}", "${pronoun} cần em giúp gì ạ?"). Nếu đối phương là "anh", "chị", "cô", "chú", "bác", "sếp", bạn hãy tự xưng là "em" để thể hiện sự lễ phép, kính trọng. Ngược lại, nếu đối phương là "bạn", bạn hãy tự xưng là "mình". Phản hồi ngắn gọn, phù hợp với ngữ cảnh Zalo chat nhóm.${timeContext}${interruptionContext}${groupPurposeContext}${memberProfileContext}${sentimentContext}\n\n${knowledgeContext}`;
+                            let reactionInstructions = '';
+                            const aiReactionProbability = aiConfig.aiReactionProbability !== undefined ? parseInt(aiConfig.aiReactionProbability) : 60;
+                            if (aiReactionProbability > 0) {
+                                reactionInstructions = `\n- HƯỚNG DẪN TƯƠNG TÁC THẢ CẢM XÚC (ADD REACTION) TỰ NHIÊN & KHÔNG MÁY MÓC:
+  1. Nếu tin nhắn hiện tại có tính tích cực, vui vẻ (dùng icon cười, đùa giỡn), hữu ích, hoặc bạn đồng ý/hài lòng với quan điểm của "${senderName}" theo tiêu chí/mục tiêu của nhóm chat, hãy sử dụng công cụ \`addReaction\` để tương tác.
+  2. Chọn icon cảm xúc phù hợp nhất: 'heart' (yêu thích/đồng tình cao), 'like' (tán thành/OK), 'hahah' (hài hước/vui nhộn), hoặc 'wow' (ngạc nhiên/thú vị).
+  3. Để tránh hành xử máy móc rập khuôn như robot, hãy chỉ thả cảm xúc khoảng ${aiReactionProbability}% số lần (không thả liên tục dồn dập). Hãy hành động ngẫu nhiên và tự nhiên như người thật.
+  4. Tham số gọi hàm: icon, msgId: "${message.data.msgId || ''}", cliMsgId: "${message.data.cliMsgId || ''}", threadId: "${message.threadId || ''}".
+  5. Hãy luôn kết hợp trả lời bằng văn bản trò chuyện thân thiện, tự nhiên, lồng ghép kết quả hành động một cách tinh tế.`;
+                            }
+
+                            const dynamicContext = `Bối cảnh hội thoại:\n- Bạn đang hoạt động trong nhóm chat Zalo có tên là "${groupName}" (ID của nhóm này là "${groupId}").\n- Bạn tên là "${botName}" (đây là tài khoản Zalo của bạn).\n- Thành viên kích hoạt bạn hiện tại là "${senderName}".\n- Khi trả lời, hãy BẮT BUỘC xưng hô và gọi đối phương là "${pronoun}" (ví dụ: "Chào ${pronoun}", "${pronoun} cần em giúp gì ạ?"). Nếu đối phương là "anh", "chị", "cô", "chú", "bác", "sếp", bạn hãy tự xưng là "em" để thể hiện sự lễ phép, kính trọng. Ngược lại, nếu đối phương là "bạn", bạn hãy tự xưng là "mình". Phản hồi ngắn gọn, phù hợp với ngữ cảnh Zalo chat nhóm.${timeContext}${interruptionContext}${groupPurposeContext}${memberProfileContext}${sentimentContext}${reactionInstructions}\n\n${knowledgeContext}`;
                             
                             // Tạo cấu hình AI tạm thời tích hợp dynamic context vào prompt hệ thống
                             const tempConfig = {

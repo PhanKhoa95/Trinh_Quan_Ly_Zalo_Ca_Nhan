@@ -36,3 +36,60 @@ Integrity mode: development
 ### Đồng bộ Google Sheets
 - [ ] Dữ liệu được đẩy lên Google Sheets tự động khi có thay đổi trạng thái hoặc trích xuất mới.
 - [ ] Bản ghi log hệ thống ghi nhận chính xác các lượt đồng bộ thành công hoặc trạng thái giả lập nếu chưa cấu hình API.
+
+## Follow-up — 2026-06-24T06:53:40Z
+
+Complete the planned milestones (M1 to M6) for the Zalo Personal Group Manager application. Turn the simulated dashboard into a functional implementation with a real Kanban board, automated PDF invoices, and synced Google Sheets.
+
+Working directory: y:\Trinh_Quan_Ly_Zalo_Ca_Nhan
+Integrity mode: demo
+
+## Requirements
+
+### R1. Kanban Board UI & Synchronization
+Replace the static Group Data list view on the frontend (`index.html`, `app.js`, `styles.css`) with a modern 4-column drag-and-drop Kanban Board (columns: `pending`, `in_progress`, `completed`, `cancelled`).
+- Drag-and-drop actions must trigger a `PUT /api/group-data/:id/status` request to update the SQLite database.
+- State changes must propagate in real-time to all other open clients via Socket.io using the `group-data-update` event.
+- Preserve the existing glassmorphism aesthetic.
+
+### R2. Automatic PDF Invoice Generation
+When an order/group status transitions to `completed`:
+- The backend must generate a PDF invoice using a lightweight PDF library (such as `pdfkit` or a custom layout writer).
+- Store the generated PDF file on the server.
+- Add a visible download button on both the Kanban card and the Group Data table allowing the user to download the PDF via `GET /api/group-data/:id/invoice`.
+
+### R3. Google Sheets Synchronization (Dual Mode)
+Add a Google Sheets configuration panel in the API Integrations tab.
+- Allow users to enter a Google Spreadsheet ID and Service Account Credentials (JSON).
+- When a status transition occurs, sync the update to the configured spreadsheet.
+- **Dual-mode fallback**: If credentials are not provided or invalid, the backend must operate in a simulated/mocked sheet sync mode, logging the synchronized data clearly in the server console and the application's "Nhật ký Logs" tab.
+
+### R4. Automated E2E Testing Suite (Playwright/Puppeteer)
+Create a programmatic E2E testing suite in the workspace using Playwright or Puppeteer.
+- Write tests that open the UI, perform drag-and-drop status changes, verify that the SQLite database is updated, verify that the Socket.io event is emitted, and verify that a PDF invoice is successfully generated and downloadable.
+
+### R5. Codebase Hardening and Error Handling
+Ensure the application is robust:
+- The server must not crash when handling invalid inputs, missing configurations, database locks, or network timeouts.
+- Provide clear error feedback in the UI and the application logs.
+
+## Acceptance Criteria
+
+### Kanban Board & Sync
+- [ ] Drag-and-drop UI functions smoothly across all 4 columns.
+- [ ] Dragging updates the SQLite database immediately.
+- [ ] Real-time synchronization works across multiple open tabs via Socket.io.
+
+### PDF Invoices
+- [ ] Moving a card to "Completed" triggers backend PDF creation.
+- [ ] Downloading the invoice returns a valid PDF file.
+- [ ] A download button is visible on Kanban cards in the "Completed" column and in the data table.
+
+### Google Sheets Sync
+- [ ] The configuration UI accepts Google Sheets settings and saves them to SQLite.
+- [ ] When credentials are valid, data syncs to the real Google Sheet.
+- [ ] When credentials are absent/invalid, the app logs the synchronized data successfully in simulated mode without throwing uncaught exceptions.
+
+### Testing & Robustness
+- [ ] The E2E test suite can be run via npm script and passes 100% of integration cases.
+- [ ] No server crashes are observed under invalid operations.

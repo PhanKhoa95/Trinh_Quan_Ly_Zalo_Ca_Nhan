@@ -1,12 +1,12 @@
-# BRIEFING — 2026-06-15T10:12:15Z
+# BRIEFING — 2026-06-24T06:53:40Z
 
 ## Mission
-Tích hợp giao diện Kanban kéo thả, xuất hóa đơn PDF tự động, và đồng bộ Google Sheets cho Quản lý Zalo Group.
+Complete milestones M1 to M6 for Zalo Personal Group Manager (Kanban, PDF invoices, Google Sheets sync, E2E tests).
 
 ## 🔒 My Identity
 - Archetype: sentinel
-- Working directory: c:\Users\KHOA MEDIA\OneDrive\Documents\Zalo Trình Quản lý Zalo Group Cá nhân\.agents
-- Orchestrator: 933afbe3-9238-4f9d-9504-ba203c87ff34
+- Working directory: y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\.agents
+- Orchestrator: d0eb2e6a-419f-4294-91e3-6ca9d7d9ef90
 - Victory Auditor: TBD
 
 ## 🔒 Key Constraints
@@ -14,7 +14,7 @@ Tích hợp giao diện Kanban kéo thả, xuất hóa đơn PDF tự động, v
 - Victory Audit is MANDATORY before reporting completion
 
 ## User Context
-- **Last user request**: Tích hợp giao diện quản lý dạng bảng Kanban kéo thả trực quan cho tab Dữ liệu nhóm, hỗ trợ tự động xuất hóa đơn dạng tệp PDF khi hoàn thành đơn hàng và đồng bộ dữ liệu với Google Sheets.
+- **Last user request**: Complete the planned milestones (M1 to M6) for the Zalo Personal Group Manager application. Turn the simulated dashboard into a functional implementation with a real Kanban board, automated PDF invoices, and synced Google Sheets.
 - **Pending clarifications**: none
 - **Delivered results**: none
 
@@ -27,4 +27,4 @@ Tích hợp giao diện Kanban kéo thả, xuất hóa đơn PDF tự động, v
 - **Retry count**: 0
 
 ## Artifact Index
-- c:\Users\KHOA MEDIA\OneDrive\Documents\Zalo Trình Quản lý Zalo Group Cá nhân\.agents\ORIGINAL_REQUEST.md — Authoritative record of the user request
+- y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\.agents\ORIGINAL_REQUEST.md — Authoritative record of the user request

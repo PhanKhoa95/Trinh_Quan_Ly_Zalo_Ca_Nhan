@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const BACKEND_URL = 'http://localhost:3000';
     let currentAppMode = 'live'; // 'simulation' hoặc 'live'
     let socket = null;
+    let aiAllProviderKeys = {};
     
     // Initial Mock Accounts
     const defaultAccounts = [];
@@ -2877,9 +2878,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderApiKeyPool(keys) {
+    function saveCurrentKeysToActiveProvider() {
         const container = document.getElementById('api-keys-container');
         if (!container) return;
+        const activeProvider = container.dataset.provider || (document.getElementById('ai-provider') ? document.getElementById('ai-provider').value : 'openai');
+        aiAllProviderKeys[activeProvider] = getApiKeyPoolValues();
+    }
+
+    function renderApiKeyPool(keys, provider = null) {
+        const container = document.getElementById('api-keys-container');
+        if (!container) return;
+        
+        // Resolve provider to set on dataset BEFORE we clear the old inputs (which triggers focusout)
+        const activeProvider = provider || (document.getElementById('ai-provider') ? document.getElementById('ai-provider').value : 'openai');
+        container.dataset.provider = activeProvider;
+        
         container.innerHTML = '';
         
         if (!keys || keys.length === 0) {
@@ -2898,6 +2911,13 @@ document.addEventListener('DOMContentLoaded', () => {
             input.style.flex = '1';
             input.value = key || '';
             
+            input.addEventListener('input', () => {
+                saveCurrentKeysToActiveProvider();
+            });
+            input.addEventListener('change', () => {
+                saveCurrentKeysToActiveProvider();
+            });
+            
             const btnDelete = document.createElement('button');
             btnDelete.type = 'button';
             btnDelete.className = 'btn btn-sm btn-outline-danger';
@@ -2906,10 +2926,12 @@ document.addEventListener('DOMContentLoaded', () => {
             btnDelete.onclick = () => {
                 if (container.querySelectorAll('.api-key-row').length <= 1) {
                     input.value = '';
+                    saveCurrentKeysToActiveProvider();
                     return;
                 }
                 row.remove();
                 updateAddKeyButtonState();
+                saveCurrentKeysToActiveProvider();
             };
             
             row.appendChild(input);
@@ -2956,11 +2978,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('ai-enabled').checked = config.aiEnabled;
                 document.getElementById('ai-provider').value = config.aiProvider;
                 document.getElementById('ai-model').value = config.aiModel;
-                renderApiKeyPool(config.aiApiKeyPool || (config.aiApiKey ? [config.aiApiKey] : []));
+                
+                aiAllProviderKeys = config.aiAllProviderKeys || {
+                    openai: config.aiProvider === 'openai' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : (config.aiApiKey ? [config.aiApiKey] : []),
+                    gemini: config.aiProvider === 'gemini' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
+                    anthropic: config.aiProvider === 'anthropic' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
+                    deepseek: config.aiProvider === 'deepseek' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
+                    ollama: []
+                };
+
+                const activeProvider = config.aiProvider || 'openai';
+                renderApiKeyPool(aiAllProviderKeys[activeProvider] || ['']);
                 document.getElementById('ai-system-prompt').value = config.aiSystemPrompt;
                 document.getElementById('ai-mode').value = config.aiMode;
                 document.getElementById('ai-trigger-prefix').value = config.aiTriggerPrefix;
+                if (document.getElementById('ai-ollama-url')) {
+                    document.getElementById('ai-ollama-url').value = config.aiOllamaUrl || 'http://localhost:11434';
+                }
                 
+                if (document.getElementById('ai-temperature')) {
+                    document.getElementById('ai-temperature').value = config.aiTemperature !== undefined ? config.aiTemperature : 0.7;
+                }
+                if (document.getElementById('ai-topp')) {
+                    document.getElementById('ai-topp').value = config.aiTopP !== undefined ? config.aiTopP : 1.0;
+                }
+                if (document.getElementById('ai-max-tokens')) {
+                    document.getElementById('ai-max-tokens').value = config.aiMaxTokens !== undefined ? config.aiMaxTokens : 1000;
+                }
+                if (document.getElementById('ai-frequency-penalty')) {
+                    document.getElementById('ai-frequency-penalty').value = config.aiFrequencyPenalty !== undefined ? config.aiFrequencyPenalty : 0.0;
+                }
+                if (document.getElementById('ai-presence-penalty')) {
+                    document.getElementById('ai-presence-penalty').value = config.aiPresencePenalty !== undefined ? config.aiPresencePenalty : 0.0;
+                }
+                
+                const safety = config.aiSafetySettings || {};
+                if (document.getElementById('safety-harassment')) {
+                    document.getElementById('safety-harassment').value = safety.harassment || 'BLOCK_MEDIUM_AND_ABOVE';
+                }
+                if (document.getElementById('safety-hate-speech')) {
+                    document.getElementById('safety-hate-speech').value = safety.hateSpeech || 'BLOCK_MEDIUM_AND_ABOVE';
+                }
+                if (document.getElementById('safety-sexual')) {
+                    document.getElementById('safety-sexual').value = safety.sexuallyExplicit || safety.sexual || 'BLOCK_MEDIUM_AND_ABOVE';
+                }
+                if (document.getElementById('safety-danger')) {
+                    document.getElementById('safety-danger').value = safety.dangerousContent || safety.danger || 'BLOCK_MEDIUM_AND_ABOVE';
+                }
+
+                if (document.getElementById('ai-topk')) {
+                    document.getElementById('ai-topk').value = config.aiTopK !== undefined ? config.aiTopK : 40;
+                }
+                if (document.getElementById('ai-reasoning-effort')) {
+                    document.getElementById('ai-reasoning-effort').value = config.aiReasoningEffort || 'medium';
+                }
+
+                if (document.getElementById('ai-enable-image-gen')) {
+                    document.getElementById('ai-enable-image-gen').checked = !!config.aiEnableImageGen;
+                }
+                if (document.getElementById('ai-enable-web-search')) {
+                    document.getElementById('ai-enable-web-search').checked = !!config.aiEnableWebSearch;
+                }
+                if (document.getElementById('ai-enable-video-analysis')) {
+                    document.getElementById('ai-enable-video-analysis').checked = !!config.aiEnableVideoAnalysis;
+                }
+                if (document.getElementById('ai-reaction-probability')) {
+                    const prob = config.aiReactionProbability !== undefined ? config.aiReactionProbability : 60;
+                    document.getElementById('ai-reaction-probability').value = prob;
+                    document.getElementById('ai-reaction-prob-val').textContent = prob + '%';
+                }
+
+                if (typeof toggleProviderOptions === 'function') {
+                    toggleProviderOptions(true);
+                }
+
                 if (document.getElementById('stringee-sid')) {
                     document.getElementById('stringee-sid').value = config.stringeeSid || '';
                 }
@@ -3037,6 +3128,306 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Collapsible toggle for advanced configuration
+    const btnToggleAdvanced = document.getElementById('btn-toggle-advanced-config');
+    const advancedPanel = document.getElementById('advanced-config-panel');
+    const advancedChevron = document.getElementById('advanced-config-chevron');
+
+    if (btnToggleAdvanced && advancedPanel) {
+        btnToggleAdvanced.addEventListener('click', () => {
+            const isCollapsed = advancedPanel.style.display === 'none' || advancedPanel.style.display === '';
+            if (isCollapsed) {
+                advancedPanel.style.display = 'flex';
+                advancedChevron.style.transform = 'rotate(180deg)';
+            } else {
+                advancedPanel.style.display = 'none';
+                advancedChevron.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+
+    // Toggle provider specific options
+    const aiProviderSelect = document.getElementById('ai-provider');
+    const aiModelSelect = document.getElementById('ai-model-select');
+    const aiModelInput = document.getElementById('ai-model');
+    const openaiAdvanced = document.getElementById('openai-advanced-options');
+    const geminiAdvanced = document.getElementById('gemini-advanced-options');
+
+    const OPENAI_MODELS = [
+        { value: 'gpt-4o-mini', text: 'gpt-4o-mini (Tối ưu chi phí & Tốc độ - Mặc định)' },
+        { value: 'gpt-4o', text: 'gpt-4o (Flagship thông minh)' },
+        { value: 'o3-mini', text: 'o3-mini (Lập luận mới nhất)' },
+        { value: 'o1-mini', text: 'o1-mini (Lập luận Toán/Code)' },
+        { value: 'o1', text: 'o1 (Lập luận mạnh nhất)' },
+        { value: 'gpt-4-turbo', text: 'gpt-4-turbo (Flagship cũ)' },
+        { value: 'gpt-3.5-turbo', text: 'gpt-3.5-turbo (Legacy)' },
+        { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
+    ];
+
+    const GEMINI_MODELS = [
+        { value: 'gemini-2.5-flash', text: 'gemini-2.5-flash (Thế hệ 2.5 mới nhất - Mặc định)' },
+        { value: 'gemini-2.5-pro', text: 'gemini-2.5-pro (Flagship thế hệ 2.5)' },
+        { value: 'gemini-2.0-flash', text: 'gemini-2.0-flash (Nhanh & Thông minh)' },
+        { value: 'gemini-2.0-flash-lite', text: 'gemini-2.0-flash-lite (Tốc độ cao)' },
+        { value: 'gemini-1.5-flash', text: 'gemini-1.5-flash (Thế hệ 1.5 cũ)' },
+        { value: 'gemini-1.5-pro', text: 'gemini-1.5-pro (Thế hệ 1.5 cũ)' },
+        { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
+    ];
+
+    const ANTHROPIC_MODELS = [
+        { value: 'claude-3-5-sonnet-latest', text: 'claude-3-5-sonnet (Flagship thông minh nhất)' },
+        { value: 'claude-3-5-haiku-latest', text: 'claude-3-5-haiku (Tốc độ cao & Linh hoạt)' },
+        { value: 'claude-3-opus-latest', text: 'claude-3-opus (Thế hệ cũ, chuyên lập luận)' },
+        { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
+    ];
+
+    const DEEPSEEK_MODELS = [
+        { value: 'deepseek-chat', text: 'deepseek-chat (DeepSeek V3 - Nhanh & Rẻ)' },
+        { value: 'deepseek-reasoner', text: 'deepseek-reasoner (DeepSeek R1 - Siêu lập luận)' },
+        { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
+    ];
+
+    const OLLAMA_MODELS = [
+        { value: 'llama3', text: 'llama3 (Mặc định)' },
+        { value: 'mistral', text: 'mistral (Thông minh & Gọn nhẹ)' },
+        { value: 'phi3', text: 'phi3 (Mẫu nhỏ từ Microsoft)' },
+        { value: 'qwen', text: 'qwen (Mạnh mẽ về ngôn ngữ)' },
+        { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
+    ];
+
+    function toggleModelConfigOptions() {
+        const provider = aiProviderSelect ? aiProviderSelect.value : 'openai';
+        const modelValue = aiModelSelect && aiModelSelect.value === 'custom' ? (aiModelInput ? aiModelInput.value : '') : (aiModelSelect ? aiModelSelect.value : '');
+
+        // 1. Toggle Ollama Server URL container
+        const ollamaUrlContainer = document.getElementById('ollama-url-container');
+        if (ollamaUrlContainer) {
+            ollamaUrlContainer.style.display = provider === 'ollama' ? 'block' : 'none';
+        }
+
+        // 2. Toggle Advanced Options Panels
+        const tempInput = document.getElementById('ai-temperature');
+        const toppInput = document.getElementById('ai-topp');
+        const freqInput = document.getElementById('ai-frequency-penalty');
+        const presInput = document.getElementById('ai-presence-penalty');
+        
+        const tempContainer = tempInput ? tempInput.parentElement : null;
+        const toppContainer = toppInput ? toppInput.parentElement : null;
+        const freqContainer = freqInput ? freqInput.parentElement : null;
+        const presContainer = presInput ? presInput.parentElement : null;
+
+        const reasoningContainer = document.getElementById('openai-reasoning-container');
+
+        // Reset display of core fields
+        if (tempContainer) tempContainer.style.display = 'block';
+        if (toppContainer) toppContainer.style.display = 'block';
+        if (freqContainer) freqContainer.style.display = 'block';
+        if (presContainer) presContainer.style.display = 'block';
+        if (openaiAdvanced) openaiAdvanced.style.display = 'none';
+        if (geminiAdvanced) geminiAdvanced.style.display = 'none';
+        if (reasoningContainer) reasoningContainer.style.display = 'none';
+
+        // Check model type
+        const isLegacyReasoning = modelValue.startsWith('o1-mini') || modelValue.startsWith('o1-preview');
+        const isNewReasoning = modelValue === 'o3-mini' || modelValue === 'o1' || modelValue.startsWith('o3-') || (modelValue.startsWith('o1') && !isLegacyReasoning);
+        const isDeepSeekReasoner = modelValue === 'deepseek-reasoner';
+
+        // Customize labels / displays based on provider & model
+        if (provider === 'openai') {
+            openaiAdvanced.style.display = 'flex';
+            if (isLegacyReasoning) {
+                if (tempContainer) tempContainer.style.display = 'none';
+                if (toppContainer) toppContainer.style.display = 'none';
+                openaiAdvanced.style.display = 'none'; // hide penalties too
+            } else if (isNewReasoning) {
+                if (freqContainer) freqContainer.style.display = 'none';
+                if (presContainer) presContainer.style.display = 'none';
+                if (reasoningContainer) reasoningContainer.style.display = 'block';
+            } else {
+                if (reasoningContainer) reasoningContainer.style.display = 'none';
+            }
+        } else if (provider === 'gemini') {
+            geminiAdvanced.style.display = 'flex';
+            if (freqContainer) freqContainer.style.display = 'none';
+            if (presContainer) presContainer.style.display = 'none';
+        } else if (provider === 'anthropic') {
+            if (freqContainer) freqContainer.style.display = 'none';
+            if (presContainer) presContainer.style.display = 'none';
+        } else if (provider === 'deepseek') {
+            if (isDeepSeekReasoner) {
+                if (tempContainer) tempContainer.style.display = 'none';
+                if (toppContainer) toppContainer.style.display = 'none';
+                if (freqContainer) freqContainer.style.display = 'none';
+                if (presContainer) presContainer.style.display = 'none';
+            } else {
+                openaiAdvanced.style.display = 'flex';
+            }
+        } else if (provider === 'ollama') {
+            openaiAdvanced.style.display = 'flex';
+            if (freqContainer) {
+                const label = freqContainer.querySelector('label');
+                if (label) label.textContent = 'Repeat Penalty (Tần suất lặp)';
+            }
+            if (presContainer) presContainer.style.display = 'none';
+        }
+
+        // Restore repeat penalty label for non-ollama
+        if (provider !== 'ollama' && freqContainer) {
+            const label = freqContainer.querySelector('label');
+            if (label) label.textContent = 'Frequency Penalty (Tránh lặp từ)';
+        }
+    }
+
+    async function fetchProviderModels(provider, apiKey, ollamaUrl) {
+        try {
+            const query = new URLSearchParams({ provider });
+            if (apiKey) query.append('apiKey', apiKey);
+            if (ollamaUrl) query.append('ollamaUrl', ollamaUrl);
+
+            const res = await fetch(`${BACKEND_URL}/api/ai/models?${query.toString()}`);
+            const json = await res.json();
+            if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+                return json.data.map(m => ({ value: m, text: m }));
+            }
+        } catch (e) {
+            console.error('Lỗi khi tải danh sách model thực tế từ API:', e);
+        }
+        return null;
+    }
+
+    async function populateModelOptions(provider, selectedValue) {
+        if (!aiModelSelect) return;
+        aiModelSelect.innerHTML = '<option value="" disabled selected>🔄 Đang tải danh sách model...</option>';
+        
+        const keys = getApiKeyPoolValues();
+        const apiKey = keys[0] || '';
+        const ollamaUrl = document.getElementById('ai-ollama-url') ? document.getElementById('ai-ollama-url').value : 'http://localhost:11434';
+        
+        let fetchedModels = null;
+        if (provider === 'ollama' || apiKey) {
+            fetchedModels = await fetchProviderModels(provider, apiKey, ollamaUrl);
+        }
+        
+        let models = fetchedModels;
+        if (!models || models.length === 0) {
+            let defaultModels = OPENAI_MODELS;
+            if (provider === 'gemini') defaultModels = GEMINI_MODELS;
+            else if (provider === 'anthropic') defaultModels = ANTHROPIC_MODELS;
+            else if (provider === 'deepseek') defaultModels = DEEPSEEK_MODELS;
+            else if (provider === 'ollama') defaultModels = OLLAMA_MODELS;
+            models = defaultModels;
+        } else {
+            // Append "Khác (Tự nhập thủ công...)" option
+            models.push({ value: 'custom', text: 'Khác (Tự nhập thủ công...)' });
+        }
+        
+        aiModelSelect.innerHTML = '';
+        let found = false;
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.value;
+            opt.textContent = m.text || m.value;
+            aiModelSelect.appendChild(opt);
+            if (m.value === selectedValue) {
+                found = true;
+            }
+        });
+
+        if (selectedValue && !found) {
+            aiModelSelect.value = 'custom';
+            if (aiModelInput) {
+                aiModelInput.style.display = 'block';
+                aiModelInput.value = selectedValue;
+            }
+        } else {
+            aiModelSelect.value = selectedValue || models[0].value;
+            if (aiModelInput) {
+                aiModelInput.style.display = 'none';
+                aiModelInput.value = aiModelSelect.value;
+            }
+        }
+        
+        toggleModelConfigOptions();
+    }
+
+    async function toggleProviderOptions(isInitialLoad = false) {
+        if (!aiProviderSelect || !openaiAdvanced || !geminiAdvanced) return;
+        const provider = aiProviderSelect.value;
+        
+        let targetModel = '';
+        if (isInitialLoad && aiModelInput && aiModelInput.value) {
+            targetModel = aiModelInput.value;
+        } else {
+            if (provider === 'openai') targetModel = 'gpt-4o-mini';
+            else if (provider === 'gemini') targetModel = 'gemini-2.5-flash';
+            else if (provider === 'anthropic') targetModel = 'claude-3-5-sonnet-latest';
+            else if (provider === 'deepseek') targetModel = 'deepseek-chat';
+            else if (provider === 'ollama') targetModel = 'llama3';
+        }
+        
+        await populateModelOptions(provider, targetModel);
+    }
+
+    if (aiProviderSelect) {
+        aiProviderSelect.addEventListener('change', async () => {
+            const newProvider = aiProviderSelect.value;
+            const keys = aiAllProviderKeys[newProvider] || [''];
+            renderApiKeyPool(keys);
+            await toggleProviderOptions(false);
+        });
+    }
+
+    if (aiModelSelect) {
+        aiModelSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                if (aiModelInput) {
+                    aiModelInput.style.display = 'block';
+                    aiModelInput.value = aiProviderSelect.value === 'openai' ? 'gpt-4o-mini' : 
+                                         aiProviderSelect.value === 'gemini' ? 'gemini-2.5-flash' :
+                                         aiProviderSelect.value === 'anthropic' ? 'claude-3-5-sonnet-latest' :
+                                         aiProviderSelect.value === 'deepseek' ? 'deepseek-chat' : 'llama3';
+                }
+            } else {
+                if (aiModelInput) {
+                    aiModelInput.style.display = 'none';
+                    aiModelInput.value = this.value;
+                }
+            }
+            toggleModelConfigOptions();
+        });
+    }
+
+    if (aiModelInput) {
+        aiModelInput.addEventListener('input', function() {
+            toggleModelConfigOptions();
+        });
+    }
+
+    // Auto-update model list when API key is edited or Ollama URL changes
+    const apiKeysContainer = document.getElementById('api-keys-container');
+    if (apiKeysContainer) {
+        apiKeysContainer.addEventListener('focusout', (e) => {
+            if (e.target && e.target.classList.contains('api-key-input')) {
+                saveCurrentKeysToActiveProvider();
+                const inputs = Array.from(apiKeysContainer.querySelectorAll('.api-key-input'));
+                if (inputs[0] === e.target && aiProviderSelect) {
+                    const currentModel = aiModelSelect ? aiModelSelect.value : '';
+                    populateModelOptions(aiProviderSelect.value, currentModel);
+                }
+            }
+        });
+    }
+
+    const aiOllamaUrlInput = document.getElementById('ai-ollama-url');
+    if (aiOllamaUrlInput) {
+        aiOllamaUrlInput.addEventListener('change', () => {
+            if (aiProviderSelect && aiProviderSelect.value === 'ollama') {
+                const currentModel = aiModelSelect ? aiModelSelect.value : '';
+                populateModelOptions('ollama', currentModel);
+            }
+        });
+    }
+
     // Bind AI Integration Form Submit
     const aiForm = document.getElementById('ai-integration-form');
     if (aiForm) {
@@ -3045,6 +3436,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const aiEnabled = document.getElementById('ai-enabled').checked;
             const aiProvider = document.getElementById('ai-provider').value;
             const aiModel = document.getElementById('ai-model').value;
+            
+            // Sync current keys to the state first
+            saveCurrentKeysToActiveProvider();
+            
             const aiApiKeyPool = getApiKeyPoolValues();
             const aiApiKey = aiApiKeyPool[0] || '';
             const aiSystemPrompt = document.getElementById('ai-system-prompt').value;
@@ -3053,6 +3448,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const globalHostGroupId = document.getElementById('ai-global-host-group') ? document.getElementById('ai-global-host-group').value : '';
             
             const checkedGroups = Array.from(document.querySelectorAll('input[name="ai-target-groups"]:checked')).map(cb => cb.value);
+
+            const aiTemperature = document.getElementById('ai-temperature') ? parseFloat(document.getElementById('ai-temperature').value) : 0.7;
+            const aiTopP = document.getElementById('ai-topp') ? parseFloat(document.getElementById('ai-topp').value) : 1.0;
+            const aiMaxTokens = document.getElementById('ai-max-tokens') ? parseInt(document.getElementById('ai-max-tokens').value) : 1000;
+            const aiFrequencyPenalty = document.getElementById('ai-frequency-penalty') ? parseFloat(document.getElementById('ai-frequency-penalty').value) : 0.0;
+            const aiPresencePenalty = document.getElementById('ai-presence-penalty') ? parseFloat(document.getElementById('ai-presence-penalty').value) : 0.0;
+            
+            const aiTopK = document.getElementById('ai-topk') ? parseInt(document.getElementById('ai-topk').value) : 40;
+            const aiReasoningEffort = document.getElementById('ai-reasoning-effort') ? document.getElementById('ai-reasoning-effort').value : 'medium';
+            const aiOllamaUrl = document.getElementById('ai-ollama-url') ? document.getElementById('ai-ollama-url').value : 'http://localhost:11434';
+
+            const aiEnableImageGen = document.getElementById('ai-enable-image-gen') ? document.getElementById('ai-enable-image-gen').checked : false;
+            const aiEnableWebSearch = document.getElementById('ai-enable-web-search') ? document.getElementById('ai-enable-web-search').checked : false;
+            const aiEnableVideoAnalysis = document.getElementById('ai-enable-video-analysis') ? document.getElementById('ai-enable-video-analysis').checked : false;
+            const aiReactionProbability = document.getElementById('ai-reaction-probability') ? parseInt(document.getElementById('ai-reaction-probability').value) : 60;
+
+            const aiSafetySettings = {
+                harassment: document.getElementById('safety-harassment') ? document.getElementById('safety-harassment').value : 'BLOCK_MEDIUM_AND_ABOVE',
+                hateSpeech: document.getElementById('safety-hate-speech') ? document.getElementById('safety-hate-speech').value : 'BLOCK_MEDIUM_AND_ABOVE',
+                sexuallyExplicit: document.getElementById('safety-sexual') ? document.getElementById('safety-sexual').value : 'BLOCK_MEDIUM_AND_ABOVE',
+                dangerousContent: document.getElementById('safety-danger') ? document.getElementById('safety-danger').value : 'BLOCK_MEDIUM_AND_ABOVE'
+            };
 
             try {
                 // Đọc config cũ để merge
@@ -3067,11 +3484,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     aiModel,
                     aiApiKey,
                     aiApiKeyPool,
+                    aiAllProviderKeys, // Send the whole dictionary!
                     aiSystemPrompt,
                     aiMode,
                     aiTriggerPrefix,
                     aiGroups: checkedGroups,
-                    globalHostGroupId
+                    globalHostGroupId,
+                    aiTemperature,
+                    aiTopP,
+                    aiMaxTokens,
+                    aiFrequencyPenalty,
+                    aiPresencePenalty,
+                    aiSafetySettings,
+                    aiTopK,
+                    aiReasoningEffort,
+                    aiOllamaUrl,
+                    aiEnableImageGen,
+                    aiEnableWebSearch,
+                    aiEnableVideoAnalysis,
+                    aiReactionProbability
                 };
 
                 const res = await fetch(`${BACKEND_URL}/api/ai/config`, {
@@ -3083,6 +3514,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (json.success) {
                     addTerminalLog('Cấu hình Trợ lý AI nội bộ đã được lưu thành công.', 'success');
                     alert('Đã lưu cấu hình Trợ lý AI!');
+                    if (json.data && json.data.aiAllProviderKeys) {
+                        aiAllProviderKeys = json.data.aiAllProviderKeys;
+                    }
                     const badge = document.getElementById('ai-status-badge');
                     if (badge) {
                         badge.style.display = aiEnabled ? 'inline-block' : 'none';
@@ -3182,6 +3616,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Bind AI Reaction Probability Slider
+    const reactProb = document.getElementById('ai-reaction-probability');
+    const reactProbVal = document.getElementById('ai-reaction-prob-val');
+    if (reactProb && reactProbVal) {
+        reactProb.addEventListener('input', (e) => {
+            reactProbVal.textContent = e.target.value + '%';
+        });
+    }
+
     const btnAddKey = document.getElementById('btn-add-api-key');
     if (btnAddKey) {
         btnAddKey.addEventListener('click', () => {
@@ -3213,7 +3656,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Dynamic model suggest on provider change
-    const aiProviderSelect = document.getElementById('ai-provider');
     if (aiProviderSelect) {
         aiProviderSelect.addEventListener('change', function() {
             const modelInput = document.getElementById('ai-model');

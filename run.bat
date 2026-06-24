@@ -21,8 +21,20 @@ rem Di chuyen vao thu muc server
 cd /d "%~dp0server"
 
 rem 2. Kiem tra va cai dat node_modules
+set NEED_INSTALL=0
 if not exist node_modules (
-    echo [THONG BAO] Khong tim thay thu muc node_modules.
+    set NEED_INSTALL=1
+    goto :INSTALL_DEPENDENCIES
+)
+
+node -e "const pkg = require('./package.json'); Object.keys(pkg.dependencies || {}).forEach(require.resolve);" >nul 2>&1
+if errorlevel 1 (
+    set NEED_INSTALL=1
+)
+
+:INSTALL_DEPENDENCIES
+if "%NEED_INSTALL%"=="1" (
+    echo [THONG BAO] Khong tim thay hoac thieu thu vien trong thu muc node_modules.
     echo Dang tien hanh cai dat cac thu vien. Vui long cho...
     echo(
     

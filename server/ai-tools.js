@@ -282,6 +282,14 @@ const geminiTools = convertToGeminiTools(ZCA_TOOLS_RAW);
  */
 async function executeZaloApi(apiInstance, functionName, args) {
     try {
+        const enabledToolsMap = getEnabledTools();
+        if (enabledToolsMap[functionName] === false) {
+            console.log(`[AI Function Call] Blocked call to '${functionName}' because it is disabled in API Control.`);
+            return {
+                success: false,
+                error: `Quyền thực thi bị từ chối: Tính năng '${functionName}' hiện đang bị TẮT trong Bảng Kiểm Soát Tính Năng Tương Tác AI (API Control). Hãy giải thích và hướng dẫn người dùng bật lại quyền này trên giao diện Dashboard nếu họ muốn thực hiện.`
+            };
+        }
         const result = await _executeZaloApiInternal(apiInstance, functionName, args);
         if (result && result.success === false) {
             incrementToolStat(functionName, false);
@@ -296,6 +304,48 @@ async function executeZaloApi(apiInstance, functionName, args) {
 }
 
 async function _executeZaloApiInternal(apiInstance, functionName, args) {
+    if (functionName === 'webSearch') {
+        const query = args.query;
+        console.log(`[AI Web Search] AI tool called 'webSearch' with query: "${query}"`);
+        try {
+            const url = `https://vi.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const json = await res.json();
+                const searchResults = json.query?.search || [];
+                if (searchResults.length > 0) {
+                    const resultsText = searchResults.map((r, i) => `${i+1}. ${r.title}: ${r.snippet.replace(/<\/?[^>]+(>|$)/g, "")}`).join('\n');
+                    return { success: true, message: `Kết quả tìm kiếm trực tuyến từ Wikipedia về "${query}":\n${resultsText}` };
+                }
+            }
+        } catch (e) {
+            console.error('Lỗi tìm kiếm web:', e.message);
+        }
+        return { success: false, error: 'Không thể truy cập dữ liệu tìm kiếm trực tuyến lúc này.' };
+    }
+
+    if (functionName === 'generateImage') {
+        const prompt = args.prompt;
+        console.log(`[AI Image Gen] AI tool called 'generateImage' with prompt: "${prompt}"`);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=800&nologo=true`;
+        return { 
+            success: true, 
+            message: `Đã vẽ tranh thành công cho mô tả: "${prompt}". Đường dẫn ảnh: ${imageUrl}`,
+            imageUrl: imageUrl
+        };
+    }
+
+    if (functionName === 'searchVideo') {
+        const query = args.query;
+        console.log(`[AI Video Search] AI tool called 'searchVideo' with query: "${query}"`);
+        const videoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+        return {
+            success: true,
+            message: `Đã tìm kiếm video liên quan đến: "${query}". Bạn có thể xem danh sách video tại đây: ${videoUrl}`,
+            videoUrl: videoUrl
+        };
+    }
+
     if (functionName === 'saveMemberMemory') {
         console.log(`[AI Long-Term Memory] AI tool called 'saveMemberMemory' with args:`, JSON.stringify(args));
         try {

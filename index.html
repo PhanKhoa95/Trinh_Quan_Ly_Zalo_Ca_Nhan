@@ -1006,12 +1006,23 @@
                                                     <select class="select-control" id="ai-provider" style="width:100%;">
                                                         <option value="openai">OpenAI (ChatGPT)</option>
                                                         <option value="gemini">Google Gemini</option>
+                                                        <option value="anthropic">Anthropic (Claude)</option>
+                                                        <option value="deepseek">DeepSeek</option>
+                                                        <option value="ollama">Ollama (Local AI)</option>
                                                     </select>
                                                 </div>
-                                                <div class="flex-grow" style="flex:1;">
-                                                    <label for="ai-model">Model AI</label>
-                                                    <input type="text" class="input-control" id="ai-model" value="gpt-4o-mini" placeholder="Ví dụ: gpt-4o-mini, gemini-1.5-flash" style="width:100%;">
+                                                <div class="flex-grow" style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                                                    <label for="ai-model-select">Model AI</label>
+                                                    <select class="select-control" id="ai-model-select" style="width:100%; height:38px;">
+                                                        <!-- Dynamic model list populated by JS -->
+                                                    </select>
+                                                    <input type="text" class="input-control" id="ai-model" value="gpt-4o-mini" placeholder="Ví dụ: gpt-4o-mini, gemini-1.5-flash" style="width:100%; display:none; margin-top:5px; height:34px; font-size:0.8rem;">
                                                 </div>
+                                            </div>
+
+                                            <div class="form-group" id="ollama-url-container" style="display:none; margin-bottom: 15px;">
+                                                <label for="ai-ollama-url">Ollama Server URL</label>
+                                                <input type="text" class="input-control" id="ai-ollama-url" value="http://localhost:11434" placeholder="Ví dụ: http://localhost:11434" style="width:100%;">
                                             </div>
 
                                             <div class="form-group" style="margin-bottom: 15px;">
@@ -1027,6 +1038,155 @@
                                             <div class="form-group" style="margin-bottom: 12px;">
                                                 <label for="ai-system-prompt">Prompt hệ thống (System Prompt / Instructions)</label>
                                                 <textarea class="input-control" id="ai-system-prompt" rows="3" placeholder="Ví dụ: Bạn là một trợ lý bán hàng Zalo chuyên nghiệp. Hãy trả lời ngắn gọn, thân thiện." style="width:100%; min-height:80px; resize:vertical; font-family:inherit; padding:10px;"></textarea>
+                                                <p class="text-muted" style="font-size:0.7rem; margin-top:4px; line-height: 1.2;">
+                                                    💡 <strong>Mẹo thả tim tự động:</strong> Bạn có thể bổ sung chỉ dẫn vào prompt để định hướng cảm xúc (Ví dụ: <em>"Hãy thả tim (heart) vào các tin nhắn tích cực, vui vẻ bằng công cụ addReaction."</em>).
+                                                </p>
+                                            </div>
+
+                                            <!-- Collapsible Advanced Model Config -->
+                                            <div class="advanced-model-config" style="margin-bottom: 15px;">
+                                                <button type="button" class="btn btn-secondary" id="btn-toggle-advanced-config" style="width:100%; justify-content:space-between; display:flex; align-items:center; padding:8px 12px; font-size:0.8rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius: var(--border-radius-sm);">
+                                                    <span>⚙️ Cấu hình sâu từng Model (Advanced Options)</span>
+                                                    <i data-lucide="chevron-down" id="advanced-config-chevron" style="width:16px; height:16px; transition: transform 0.2s;"></i>
+                                                </button>
+                                                
+                                                <div id="advanced-config-panel" style="display:none; padding:15px; margin-top:10px; background:rgba(0,0,0,0.15); border-radius:var(--border-radius-sm); border:1px solid var(--border-color); flex-direction:column; gap:12px;">
+                                                    <div class="form-group row-flex" style="display:flex; gap:15px; margin-bottom: 0;">
+                                                        <div class="flex-grow" style="flex:1;">
+                                                            <label for="ai-temperature" style="font-size:0.75rem; margin-bottom: 4px; display: block;">Temperature (Độ sáng tạo)</label>
+                                                            <input type="number" step="0.1" min="0" max="2" class="input-control" id="ai-temperature" value="0.7" style="width:100%; height:34px; font-size:0.8rem;">
+                                                        </div>
+                                                        <div class="flex-grow" style="flex:1;">
+                                                            <label for="ai-topp" style="font-size:0.75rem; margin-bottom: 4px; display: block;">Top P (Chọn lọc mẫu)</label>
+                                                            <input type="number" step="0.1" min="0" max="1" class="input-control" id="ai-topp" value="1.0" style="width:100%; height:34px; font-size:0.8rem;">
+                                                        </div>
+                                                        <div class="flex-grow" style="flex:1;">
+                                                            <label for="ai-max-tokens" style="font-size:0.75rem; margin-bottom: 4px; display: block;">Max Tokens (Độ dài tối đa)</label>
+                                                            <input type="number" min="1" max="65536" class="input-control" id="ai-max-tokens" value="1000" style="width:100%; height:34px; font-size:0.8rem;">
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- OpenAI only options -->
+                                                    <div id="openai-advanced-options" style="display:flex; flex-direction:column; gap:12px;">
+                                                        <div style="display:flex; gap:15px; width:100%;">
+                                                            <div class="flex-grow" style="flex:1;">
+                                                                <label for="ai-frequency-penalty" style="font-size:0.75rem; margin-bottom: 4px; display: block;">Frequency Penalty (Tránh lặp từ)</label>
+                                                                <input type="number" step="0.1" min="-2" max="2" class="input-control" id="ai-frequency-penalty" value="0.0" style="width:100%; height:34px; font-size:0.8rem;">
+                                                            </div>
+                                                            <div class="flex-grow" style="flex:1;">
+                                                                <label for="ai-presence-penalty" style="font-size:0.75rem; margin-bottom: 4px; display: block;">Presence Penalty (Nói chủ đề mới)</label>
+                                                                <input type="number" step="0.1" min="-2" max="2" class="input-control" id="ai-presence-penalty" value="0.0" style="width:100%; height:34px; font-size:0.8rem;">
+                                                            </div>
+                                                        </div>
+                                                        <div id="openai-reasoning-container" style="display:none; width:100%;">
+                                                            <div class="flex-grow" style="flex:1;">
+                                                                <label for="ai-reasoning-effort" style="font-size:0.75rem; margin-bottom: 4px; display: block;">Reasoning Effort (Độ sâu lập luận - o1/o3-mini)</label>
+                                                                <select class="select-control" id="ai-reasoning-effort" style="width:100%; height:34px; font-size:0.8rem; padding: 0 10px;">
+                                                                    <option value="medium" selected>Trung bình (Medium)</option>
+                                                                    <option value="low">Thấp (Low)</option>
+                                                                    <option value="high">Cao (High)</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Gemini only options (Safety Settings) -->
+                                                    <div id="gemini-advanced-options" style="display:none; flex-direction:column; gap:10px;">
+                                                        <div style="display:flex; gap:15px; margin-bottom: 5px; align-items: center; justify-content: space-between;">
+                                                            <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Cài đặt Bộ lọc An toàn (Gemini Safety Settings)</span>
+                                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                                <label for="ai-topk" style="font-size:0.7rem; color:var(--text-muted); margin:0;">Top K:</label>
+                                                                <input type="number" min="1" max="40" class="input-control" id="ai-topk" value="40" style="width:60px; height:26px; font-size:0.75rem; padding:0 5px; margin:0;">
+                                                            </div>
+                                                        </div>
+                                                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                                            <div>
+                                                                <label for="safety-harassment" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 2px; display: block;">Quấy rối (Harassment)</label>
+                                                                <select class="select-control" id="safety-harassment" style="width:100%; height:32px; font-size:0.75rem; padding-top:0; padding-bottom:0;">
+                                                                    <option value="BLOCK_NONE">Không chặn (None)</option>
+                                                                    <option value="BLOCK_LOW_AND_ABOVE">Chặn từ mức Thấp (Low)</option>
+                                                                    <option value="BLOCK_MEDIUM_AND_ABOVE" selected>Chặn từ Trung bình (Medium)</option>
+                                                                    <option value="BLOCK_ONLY_HIGH">Chỉ chặn mức Cao (High)</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label for="safety-hate-speech" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 2px; display: block;">Thù ghét (Hate Speech)</label>
+                                                                <select class="select-control" id="safety-hate-speech" style="width:100%; height:32px; font-size:0.75rem; padding-top:0; padding-bottom:0;">
+                                                                    <option value="BLOCK_NONE">Không chặn (None)</option>
+                                                                    <option value="BLOCK_LOW_AND_ABOVE">Chặn từ mức Thấp (Low)</option>
+                                                                    <option value="BLOCK_MEDIUM_AND_ABOVE" selected>Chặn từ Trung bình (Medium)</option>
+                                                                    <option value="BLOCK_ONLY_HIGH">Chỉ chặn mức Cao (High)</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label for="safety-sexual" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 2px; display: block;">Nhạy cảm (Sexually Explicit)</label>
+                                                                <select class="select-control" id="safety-sexual" style="width:100%; height:32px; font-size:0.75rem; padding-top:0; padding-bottom:0;">
+                                                                    <option value="BLOCK_NONE">Không chặn (None)</option>
+                                                                    <option value="BLOCK_LOW_AND_ABOVE">Chặn từ mức Thấp (Low)</option>
+                                                                    <option value="BLOCK_MEDIUM_AND_ABOVE" selected>Chặn từ Trung bình (Medium)</option>
+                                                                    <option value="BLOCK_ONLY_HIGH">Chỉ chặn mức Cao (High)</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label for="safety-danger" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 2px; display: block;">Nguy hại (Dangerous Content)</label>
+                                                                <select class="select-control" id="safety-danger" style="width:100%; height:32px; font-size:0.75rem; padding-top:0; padding-bottom:0;">
+                                                                    <option value="BLOCK_NONE">Không chặn (None)</option>
+                                                                    <option value="BLOCK_LOW_AND_ABOVE">Chặn từ mức Thấp (Low)</option>
+                                                                    <option value="BLOCK_MEDIUM_AND_ABOVE" selected>Chặn từ Trung bình (Medium)</option>
+                                                                    <option value="BLOCK_ONLY_HIGH">Chỉ chặn mức Cao (High)</option>
+                                                                </select>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Capabilities options -->
+                                                    <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 5px;">
+                                                        <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:10px;">Tính năng bổ sung (Model Capabilities)</span>
+                                                        <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+                                                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:var(--border-radius-sm); border:1px solid rgba(255,255,255,0.05);">
+                                                                <div style="display:flex; flex-direction:column; gap:2px;">
+                                                                    <span style="font-size:0.8rem; font-weight:600; color:var(--text-color);">🎨 Tạo ảnh (Image Generation)</span>
+                                                                    <span style="font-size:0.7rem; color:var(--text-muted);">Sử dụng Stable Diffusion qua Pollinations để sinh ảnh từ văn bản</span>
+                                                                </div>
+                                                                <label class="switch">
+                                                                    <input type="checkbox" id="ai-enable-image-gen">
+                                                                    <span class="slider round"></span>
+                                                                </label>
+                                                            </div>
+                                                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:var(--border-radius-sm); border:1px solid rgba(255,255,255,0.05);">
+                                                                <div style="display:flex; flex-direction:column; gap:2px;">
+                                                                    <span style="font-size:0.8rem; font-weight:600; color:var(--text-color);">🔍 Tìm kiếm thời gian thực (Web Search)</span>
+                                                                    <span style="font-size:0.7rem; color:var(--text-muted);">Tự động tìm kiếm web (Wikipedia hoặc Google Grounding cho Gemini)</span>
+                                                                </div>
+                                                                <label class="switch">
+                                                                    <input type="checkbox" id="ai-enable-web-search">
+                                                                    <span class="slider round"></span>
+                                                                </label>
+                                                            </div>
+                                                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:var(--border-radius-sm); border:1px solid rgba(255,255,255,0.05);">
+                                                                <div style="display:flex; flex-direction:column; gap:2px;">
+                                                                    <span style="font-size:0.8rem; font-weight:600; color:var(--text-color);">🎬 Tìm kiếm & Phân tích Video (Video Analysis)</span>
+                                                                    <span style="font-size:0.7rem; color:var(--text-muted);">Tìm kiếm video YouTube liên quan để phân tích và đề xuất</span>
+                                                                </div>
+                                                                <label class="switch">
+                                                                    <input type="checkbox" id="ai-enable-video-analysis">
+                                                                    <span class="slider round"></span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Reaction probability slider -->
+                                                        <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 10px;">
+                                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                                                <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">Tần suất thả cảm xúc tự động (Reaction Rate)</span>
+                                                                <span id="ai-reaction-prob-val" style="font-size:0.8rem; font-weight:600; color:var(--color-primary);">60%</span>
+                                                            </div>
+                                                            <div style="display:flex; align-items:center; gap:10px;">
+                                                                <input type="range" id="ai-reaction-probability" min="0" max="100" value="60" style="flex:1; accent-color: var(--color-primary); cursor:pointer; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; outline:none; border:none; -webkit-appearance:none;">
+                                                            </div>
+                                                            <span style="font-size:0.7rem; color:var(--text-muted); display:block; margin-top:4px;">Chỉnh tần suất AI thả cảm xúc ngẫu nhiên khi nhận biết được tin nhắn vui vẻ hoặc đạt mục tiêu nhóm. (0% = Tắt hoàn toàn).</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             
                                             <div class="form-group row-flex" style="display:flex; gap:15px; margin-bottom: 12px;">

@@ -236,17 +236,24 @@ Quy tắc trả lời:
         messages.push({ role: 'user', content: question });
 
         if (provider === 'openai') {
+            const isReasoningModel = model.startsWith('o1') || model.startsWith('o3');
+            const reqBody = {
+                model: model,
+                messages: messages
+            };
+            if (isReasoningModel) {
+                reqBody.max_completion_tokens = 250;
+            } else {
+                reqBody.max_tokens = 250;
+            }
+
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    model: model,
-                    messages: messages,
-                    max_tokens: 250
-                })
+                body: JSON.stringify(reqBody)
             });
 
             if (response.ok) {

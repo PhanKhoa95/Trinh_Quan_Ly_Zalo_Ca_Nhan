@@ -282,7 +282,14 @@ app.post('/api/accounts/remove', async (req, res) => {
 app.get('/api/groups', async (req, res) => {
     const { accountId } = req.query;
     try {
-        const client = activeClients[accountId];
+        let client = activeClients[accountId];
+        if (!client) {
+            const fallbackId = Object.keys(activeClients).find(id => activeClients[id] && activeClients[id].isLoggedIn);
+            if (fallbackId) {
+                client = activeClients[fallbackId];
+                console.log(`[Groups API Fallback] Không tìm thấy accountId=${accountId}. Fallback sang tài khoản hoạt động: ${fallbackId}`);
+            }
+        }
         if (client && client.isLoggedIn && !client.isSimulation) {
             // Lấy danh sách nhóm thực tế qua Zalo SDK
             const realGroups = await client.getGroups();
@@ -592,7 +599,14 @@ app.post('/api/groups/message/send', async (req, res) => {
 app.post('/api/groups/message/simulate', async (req, res) => {
     const { accountId, groupId, senderName, senderId, content } = req.body;
     try {
-        const client = activeClients[accountId];
+        let client = activeClients[accountId];
+        if (!client) {
+            const fallbackId = Object.keys(activeClients).find(id => activeClients[id] && activeClients[id].isLoggedIn);
+            if (fallbackId) {
+                client = activeClients[fallbackId];
+                console.log(`[Simulate API Fallback] Không tìm thấy accountId=${accountId}. Fallback sang tài khoản hoạt động: ${fallbackId}`);
+            }
+        }
         if (!client) {
             return res.status(404).json({ success: false, error: 'Không tìm thấy tài khoản.' });
         }
@@ -1063,6 +1077,89 @@ app.post('/api/broadcast', async (req, res) => {
     }
 });
 
+// Lấy danh sách Model thực tế từ API nhà cung cấp (Tự động cập nhật)
+app.get('/api/ai/models', async (req, res) => {
+    let { provider, apiKey, ollamaUrl } = req.query;
+    try {
+        let models = [];
+        
+        // Trợ giúp lấy key thực từ DB nếu key từ client bị mask hoặc rỗng
+        const isMaskedOrEmpty = (key) => !key || key.includes('...') || key === '********';
+        if (isMaskedOrEmpty(apiKey)) {
+            const config = await aiSettingsDb.findOne({});
+            if (config && config.aiProvider === provider) {
+                apiKey = config.aiApiKey;
+            }
+        }
+
+        if (provider === 'openai') {
+            if (isMaskedOrEmpty(apiKey)) return res.json({ success: true, data: [] });
+            const response = await fetch('https://api.openai.com/v1/models', {
+                headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+            if (response.ok) {
+                const json = await response.json();
+                models = json.data
+                    .map(m => m.id)
+                    .filter(id => id.startsWith('gpt-') || id.startsWith('o1-') || id.startsWith('o3-'))
+                    .sort();
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } else if (provider === 'gemini') {
+            if (isMaskedOrEmpty(apiKey)) return res.json({ success: true, data: [] });
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            if (response.ok) {
+                const json = await response.json();
+                models = json.models
+                    .map(m => m.name.replace('models/', ''))
+                    .filter(name => name.includes('gemini'))
+                    .sort();
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } else if (provider === 'deepseek') {
+            if (isMaskedOrEmpty(apiKey)) return res.json({ success: true, data: [] });
+            const response = await fetch('https://api.deepseek.com/v1/models', {
+                headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+            if (response.ok) {
+                const json = await response.json();
+                models = json.data.map(m => m.id).sort();
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } else if (provider === 'ollama') {
+            const url = ollamaUrl || 'http://localhost:11434';
+            const response = await fetch(`${url}/api/tags`);
+            if (response.ok) {
+                const json = await response.json();
+                models = json.models.map(m => m.name).sort();
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } else if (provider === 'anthropic') {
+            if (isMaskedOrEmpty(apiKey)) return res.json({ success: true, data: [] });
+            const response = await fetch('https://api.anthropic.com/v1/models', {
+                headers: {
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01'
+                }
+            });
+            if (response.ok) {
+                const json = await response.json();
+                models = json.data.map(m => m.id).sort();
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        }
+
+        res.json({ success: true, data: models });
+    } catch (err) {
+        res.json({ success: false, error: err.message, data: [] });
+    }
+});
+
 // Lấy cấu hình Trợ lý AI (OpenAI & Gemini) và RAG
 app.get('/api/ai/config', async (req, res) => {
     try {
@@ -1084,7 +1181,22 @@ app.get('/api/ai/config', async (req, res) => {
                 stringeeSid: '',
                 stringeeSecret: '',
                 stringeeHotline: '',
-                globalHostGroupId: ''
+                globalHostGroupId: '',
+                aiTemperature: 0.7,
+                aiTopP: 1.0,
+                aiMaxTokens: 1000,
+                aiFrequencyPenalty: 0.0,
+                aiPresencePenalty: 0.0,
+                aiEnableImageGen: false,
+                aiEnableWebSearch: false,
+                aiEnableVideoAnalysis: false,
+                aiReactionProbability: 60,
+                aiSafetySettings: {
+                    harassment: 'BLOCK_MEDIUM_AND_ABOVE',
+                    hateSpeech: 'BLOCK_MEDIUM_AND_ABOVE',
+                    sexuallyExplicit: 'BLOCK_MEDIUM_AND_ABOVE',
+                    dangerousContent: 'BLOCK_MEDIUM_AND_ABOVE'
+                }
             };
         }
 
@@ -1098,22 +1210,47 @@ app.get('/api/ai/config', async (req, res) => {
             return '********';
         };
 
-        let maskedKey = mask(config.aiApiKey);
+        const activeProvider = config.aiProvider || 'openai';
+        const poolObj = config.aiApiKeyPool && typeof config.aiApiKeyPool === 'object' && !Array.isArray(config.aiApiKeyPool)
+            ? config.aiApiKeyPool
+            : {
+                openai: config.aiProvider === 'openai' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : (config.aiApiKey ? [config.aiApiKey] : []),
+                gemini: config.aiProvider === 'gemini' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
+                anthropic: config.aiProvider === 'anthropic' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
+                deepseek: config.aiProvider === 'deepseek' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
+                ollama: []
+            };
 
-        let pool = Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [];
-        if (pool.length === 0 && config.aiApiKey) {
-            pool = [config.aiApiKey];
+        // Mask all keys in the pool object
+        const maskedPoolObj = {};
+        for (const [p, keys] of Object.entries(poolObj)) {
+            maskedPoolObj[p] = Array.isArray(keys) ? keys.map(k => mask(k)) : [];
         }
 
-        const maskedPool = pool.map(k => mask(k));
+        const activePool = poolObj[activeProvider] || [];
+        const maskedActivePool = maskedPoolObj[activeProvider] || [];
+        const activeKey = activePool[0] || '';
+        const maskedActiveKey = mask(activeKey);
 
         res.json({ 
             success: true, 
             data: {
+                aiTemperature: 0.7,
+                aiTopP: 1.0,
+                aiMaxTokens: 1000,
+                aiFrequencyPenalty: 0.0,
+                aiPresencePenalty: 0.0,
+                aiSafetySettings: {
+                    harassment: 'BLOCK_MEDIUM_AND_ABOVE',
+                    hateSpeech: 'BLOCK_MEDIUM_AND_ABOVE',
+                    sexuallyExplicit: 'BLOCK_MEDIUM_AND_ABOVE',
+                    dangerousContent: 'BLOCK_MEDIUM_AND_ABOVE'
+                },
                 ...config,
-                aiApiKey: maskedKey,
-                aiApiKeyPool: maskedPool,
-                hasApiKey: !!config.aiApiKey
+                aiApiKey: maskedActiveKey,
+                aiApiKeyPool: maskedActivePool,
+                aiAllProviderKeys: maskedPoolObj,
+                hasApiKey: !!activeKey
             } 
         });
     } catch (error) {
@@ -1127,39 +1264,63 @@ app.post('/api/ai/config', async (req, res) => {
         aiEnabled, aiProvider, aiApiKey, aiApiKeyPool, aiModel, aiSystemPrompt, aiMode, aiTriggerPrefix, aiGroups,
         ragTopK, ragScoreThreshold, ragSearchMode,
         stringeeSid, stringeeSecret, stringeeHotline, stringeeServerUrl,
-        globalHostGroupId
+        globalHostGroupId,
+        aiTemperature, aiTopP, aiMaxTokens, aiFrequencyPenalty, aiPresencePenalty, aiSafetySettings,
+        aiTopK, aiReasoningEffort, aiOllamaUrl,
+        aiAllProviderKeys,
+        aiEnableImageGen, aiEnableWebSearch, aiEnableVideoAnalysis,
+        aiReactionProbability
     } = req.body;
     try {
         let currentConfig = await aiSettingsDb.findOne({}) || {};
-        const currentPool = Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : [];
+        const currentPoolObj = currentConfig.aiApiKeyPool && typeof currentConfig.aiApiKeyPool === 'object' && !Array.isArray(currentConfig.aiApiKeyPool)
+            ? currentConfig.aiApiKeyPool
+            : {
+                openai: currentConfig.aiProvider === 'openai' && Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : (currentConfig.aiApiKey ? [currentConfig.aiApiKey] : []),
+                gemini: currentConfig.aiProvider === 'gemini' && Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : [],
+                anthropic: currentConfig.aiProvider === 'anthropic' && Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : [],
+                deepseek: currentConfig.aiProvider === 'deepseek' && Array.isArray(currentConfig.aiApiKeyPool) ? currentConfig.aiApiKeyPool : [],
+                ollama: []
+            };
 
-        let poolToSave = [];
-        let keyToSave = '';
+        // Parse and unmask keys for each provider
+        const savedPoolObj = {};
+        const incomingAllKeys = aiAllProviderKeys || {};
 
-        if (aiApiKeyPool !== undefined && Array.isArray(aiApiKeyPool)) {
-            poolToSave = aiApiKeyPool.map((key, index) => {
+        const providersList = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama'];
+        providersList.forEach(p => {
+            let incomingKeys = incomingAllKeys[p];
+            if (incomingKeys === undefined) {
+                if (p === aiProvider && aiApiKeyPool !== undefined && Array.isArray(aiApiKeyPool)) {
+                    incomingKeys = aiApiKeyPool;
+                } else {
+                    incomingKeys = currentPoolObj[p] || [];
+                }
+            }
+
+            const currentProviderPool = currentPoolObj[p] || [];
+            savedPoolObj[p] = Array.isArray(incomingKeys) ? incomingKeys.map((key, index) => {
                 if (key && (key.includes('...') || key === '********')) {
-                    if (currentPool[index]) return currentPool[index];
-                    if (index === 0 && currentConfig.aiApiKey) return currentConfig.aiApiKey;
-                    return '';
+                    return currentProviderPool[index] || '';
                 }
                 return key || '';
-            }).filter(k => k);
-            keyToSave = poolToSave[0] || '';
-        } else {
-            keyToSave = aiApiKey;
-            if (aiApiKey && (aiApiKey.includes('...') || aiApiKey === '********')) {
-                keyToSave = currentConfig.aiApiKey || '';
-            }
-            poolToSave = [keyToSave].filter(k => k);
-        }
+            }).filter(k => k) : [];
+        });
+
+        // The overall active key
+        const activeProvider = aiProvider || 'openai';
+        const activeKeys = savedPoolObj[activeProvider] || [];
+        const keyToSave = activeKeys[0] || '';
 
         const record = {
             aiEnabled: !!aiEnabled,
             aiProvider: aiProvider || 'openai',
             aiApiKey: keyToSave || '',
-            aiApiKeyPool: poolToSave,
-            aiModel: aiModel || (aiProvider === 'openai' ? 'gpt-4o-mini' : 'gemini-1.5-flash'),
+            aiApiKeyPool: savedPoolObj, // Save as object
+            aiModel: aiModel || (aiProvider === 'openai' ? 'gpt-4o-mini' : 
+                                 aiProvider === 'gemini' ? 'gemini-1.5-flash' :
+                                 aiProvider === 'anthropic' ? 'claude-3-5-sonnet-latest' :
+                                 aiProvider === 'deepseek' ? 'deepseek-chat' : 'llama3'),
             aiSystemPrompt: aiSystemPrompt || 'Bạn là một trợ lý AI hữu ích trong nhóm chat Zalo.',
             aiMode: aiMode || 'mention_only',
             aiTriggerPrefix: aiTriggerPrefix || '@bot',
@@ -1172,10 +1333,44 @@ app.post('/api/ai/config', async (req, res) => {
             stringeeHotline: stringeeHotline || '',
             stringeeServerUrl: stringeeServerUrl || '',
             globalHostGroupId: globalHostGroupId || '',
+            aiTemperature: isNaN(parseFloat(aiTemperature)) ? 0.7 : parseFloat(aiTemperature),
+            aiTopP: isNaN(parseFloat(aiTopP)) ? 1.0 : parseFloat(aiTopP),
+            aiMaxTokens: parseInt(aiMaxTokens) || 1000,
+            aiFrequencyPenalty: isNaN(parseFloat(aiFrequencyPenalty)) ? 0.0 : parseFloat(aiFrequencyPenalty),
+            aiPresencePenalty: isNaN(parseFloat(aiPresencePenalty)) ? 0.0 : parseFloat(aiPresencePenalty),
+            aiEnableImageGen: !!aiEnableImageGen,
+            aiEnableWebSearch: !!aiEnableWebSearch,
+            aiEnableVideoAnalysis: !!aiEnableVideoAnalysis,
+            aiReactionProbability: isNaN(parseInt(aiReactionProbability)) ? 60 : parseInt(aiReactionProbability),
+            aiSafetySettings: aiSafetySettings || {
+                harassment: 'BLOCK_MEDIUM_AND_ABOVE',
+                hateSpeech: 'BLOCK_MEDIUM_AND_ABOVE',
+                sexuallyExplicit: 'BLOCK_MEDIUM_AND_ABOVE',
+                dangerousContent: 'BLOCK_MEDIUM_AND_ABOVE'
+            },
+            aiTopK: isNaN(parseInt(aiTopK)) ? 40 : parseInt(aiTopK),
+            aiReasoningEffort: aiReasoningEffort || 'medium',
+            aiOllamaUrl: aiOllamaUrl || 'http://localhost:11434',
             updatedAt: new Date()
         };
         await aiSettingsDb.update({}, record, { upsert: true });
-        res.json({ success: true, message: 'Đã lưu cấu hình Trợ lý AI và RAG thành công.', data: { ...record, aiApiKey: '********', aiApiKeyPool: record.aiApiKeyPool.map(() => '********') } });
+
+        // Generate response with masked values
+        const maskedSavedPoolObj = {};
+        for (const [p, keys] of Object.entries(savedPoolObj)) {
+            maskedSavedPoolObj[p] = Array.isArray(keys) ? keys.map(() => '********') : [];
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Đã lưu cấu hình Trợ lý AI và RAG thành công.', 
+            data: { 
+                ...record, 
+                aiApiKey: '********', 
+                aiApiKeyPool: maskedSavedPoolObj[activeProvider] || [],
+                aiAllProviderKeys: maskedSavedPoolObj
+            } 
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -1190,7 +1385,17 @@ app.post('/api/ai/config/test', async (req, res) => {
         
         let keyToUse = aiApiKey;
         if (aiApiKey && (aiApiKey.includes('...') || aiApiKey === '********')) {
-            keyToUse = currentConfig.aiApiKey || '';
+            const targetProvider = aiProvider || 'openai';
+            const pool = currentConfig.aiApiKeyPool;
+            if (pool && typeof pool === 'object' && !Array.isArray(pool)) {
+                const providerPool = pool[targetProvider];
+                if (Array.isArray(providerPool) && providerPool[0]) {
+                    keyToUse = providerPool[0];
+                }
+            }
+            if (!keyToUse || keyToUse.includes('...') || keyToUse === '********') {
+                keyToUse = currentConfig.aiApiKey || '';
+            }
         }
 
         if (!keyToUse) {

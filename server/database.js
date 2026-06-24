@@ -161,7 +161,7 @@ const sessionsDb = new PrismaNedbWrapper('session');
 const rulesDb = new PrismaNedbWrapper('rule', ['keywords']);
 const campaignsDb = new PrismaNedbWrapper('campaign', ['targets']);
 const groupSettingsDb = new PrismaNedbWrapper('groupSetting');
-const aiSettingsDb = new PrismaNedbWrapper('aiSetting', ['aiGroups', 'aiApiKeyPool']);
+const aiSettingsDb = new PrismaNedbWrapper('aiSetting', ['aiGroups', 'aiApiKeyPool', 'aiSafetySettings']);
 const knowledgeDb = new PrismaNedbWrapper('knowledge', ['chunks']);
 const callsDb = new PrismaNedbWrapper('call', ['transcript']);
 

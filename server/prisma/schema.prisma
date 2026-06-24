@@ -73,6 +73,19 @@ model AiSetting {
   stringeeHotline   String   @default("")
   stringeeServerUrl String   @default("")
   globalHostGroupId String?
+  aiTemperature      Float    @default(0.7)
+  aiTopP             Float    @default(1.0)
+  aiMaxTokens        Int      @default(1000)
+  aiFrequencyPenalty Float    @default(0.0)
+  aiPresencePenalty  Float    @default(0.0)
+  aiTopK             Int      @default(40)
+  aiReasoningEffort  String   @default("medium")
+  aiOllamaUrl        String   @default("http://localhost:11434")
+  aiEnableImageGen   Boolean  @default(false)
+  aiEnableWebSearch  Boolean  @default(false)
+  aiEnableVideoAnalysis Boolean @default(false)
+  aiSafetySettings   String   @default("{}") // Stored as JSON string
+  aiReactionProbability Int   @default(60)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }

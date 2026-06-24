@@ -1,6 +1,6 @@
 {
   "message": {
-    "successes": 197,
+    "successes": 256,
     "errors": 1
   },
   "sendMessage": {
@@ -8,7 +8,7 @@
     "errors": 1
   },
   "reaction": {
-    "successes": 11,
+    "successes": 12,
     "errors": 0
   },
   "undo": {
@@ -16,11 +16,23 @@
     "errors": 0
   },
   "saveMemberMemory": {
-    "successes": 5,
+    "successes": 6,
     "errors": 0
   },
   "group_event": {
-    "successes": 2,
+    "successes": 3,
+    "errors": 0
+  },
+  "createReminder": {
+    "successes": 1,
+    "errors": 0
+  },
+  "webSearch": {
+    "successes": 4,
+    "errors": 0
+  },
+  "addReaction": {
+    "successes": 1,
     "errors": 0
   }
 }

@@ -1,4 +1,4 @@
-const { openAITools, geminiTools, executeZaloApi } = require('./ai-tools');
+const { openAITools, geminiTools, executeZaloApi, ZCA_TOOLS_RAW } = require('./ai-tools');
 const logger = require('./logger');
 
 let globalOpenAIIndex = 0;
@@ -23,9 +23,80 @@ async function downloadImageAsBase64(url) {
 
 
 /**
- * Gửi yêu cầu AI và điều phối việc sinh nội dung hoặc gọi hàm
+ * Gửi yêu cầu AI và điều phối việc sinh nội dung hoặc gọi hàm (Có hỗ trợ tự động failover sang nhà cung cấp khác khi lỗi)
  */
 async function askAI(history, config, apiInstance = null, threadId = null, depth = 0) {
+    const primaryProvider = config.aiProvider || 'openai';
+    const providersToTry = [primaryProvider];
+    
+    const pool = config.aiApiKeyPool;
+    const isObject = pool && typeof pool === 'object' && !Array.isArray(pool);
+    
+    const possibleProviders = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama'];
+    possibleProviders.forEach(p => {
+        if (p === primaryProvider) return;
+        
+        let hasKeys = false;
+        if (isObject) {
+            hasKeys = Array.isArray(pool[p]) && pool[p].filter(k => k).length > 0;
+        }
+        if (p === 'ollama') hasKeys = true;
+        
+        if (hasKeys) {
+            providersToTry.push(p);
+        }
+    });
+
+    let lastError = null;
+    for (const provider of providersToTry) {
+        try {
+            logger.info('api', `[AI Failover] Đang thử gọi AI với nhà cung cấp: ${provider}`);
+            
+            const tempConfig = { ...config, aiProvider: provider };
+            
+            // Trích xuất key cho provider này
+            if (isObject) {
+                tempConfig.aiApiKeyPool = pool[provider] || [];
+                tempConfig.aiApiKey = tempConfig.aiApiKeyPool[0] || '';
+            } else {
+                if (provider !== primaryProvider) {
+                    tempConfig.aiApiKeyPool = [];
+                    tempConfig.aiApiKey = '';
+                }
+            }
+            
+            // Đặt model mặc định cho provider backup
+            if (provider !== primaryProvider) {
+                if (provider === 'openai') tempConfig.aiModel = 'gpt-4o-mini';
+                else if (provider === 'gemini') tempConfig.aiModel = 'gemini-1.5-flash';
+                else if (provider === 'anthropic') tempConfig.aiModel = 'claude-3-5-haiku-latest';
+                else if (provider === 'deepseek') tempConfig.aiModel = 'deepseek-chat';
+                else if (provider === 'ollama') tempConfig.aiModel = 'llama3';
+            }
+            
+            const result = await executeAskAI(history, tempConfig, apiInstance, threadId, depth);
+            if (result !== null) {
+                if (provider !== primaryProvider) {
+                    logger.warn('api', `[AI Failover SUCCESS] Nhà cung cấp chính ${primaryProvider} bị lỗi, đã tự động chuyển đổi thành công sang ${provider}.`);
+                }
+                return result;
+            }
+            logger.warn('api', `[AI Failover] Nhà cung cấp ${provider} trả về kết quả rỗng (null). Thử nhà cung cấp tiếp theo...`);
+        } catch (err) {
+            lastError = err;
+            logger.error('api', `[AI Failover Error] Lỗi khi gọi nhà cung cấp ${provider}: ${err.message}. Thử nhà cung cấp tiếp theo...`);
+        }
+    }
+    
+    logger.error('api', 'Tất cả các nhà cung cấp AI cấu hình sẵn đều thất bại.');
+    if (lastError) throw lastError;
+    return null;
+}
+
+/**
+ * Hàm thực thi gốc để gửi yêu cầu đến nhà cung cấp cụ thể
+ */
+async function executeAskAI(history, config, apiInstance = null, threadId = null, depth = 0) {
     // Clone history to protect from concurrent modifications during async tool execution
     history = [...history];
 
@@ -111,11 +182,112 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
     const { getEnabledTools } = require('./ai-tools');
     const enabledToolsMap = getEnabledTools();
 
-    // Lọc bỏ các công cụ bị tắt bởi người dùng
-    let activeOpenAITools = config.disableTools ? [] : openAITools.filter(t => enabledToolsMap[t.function.name] !== false);
+    // Không lọc bỏ các công cụ bị tắt bởi người dùng khỏi danh sách gửi đến API,
+    // để chúng được gửi đầy đủ sang API. Quyền thực thi sẽ được chặn và báo lỗi phân quyền ở runtime.
+    let activeOpenAITools = config.disableTools ? [] : [...openAITools];
     let activeGeminiTools = config.disableTools ? [] : [{
-        functionDeclarations: geminiTools[0].functionDeclarations.filter(fd => enabledToolsMap[fd.name] !== false)
+        functionDeclarations: [...geminiTools[0].functionDeclarations]
     }];
+
+    // Bổ sung các công cụ nâng cao dựa trên cấu hình bật/tắt của model
+    if (!config.disableTools) {
+        if (config.aiEnableImageGen) {
+            const imageGenOpenAI = {
+                type: 'function',
+                function: {
+                    name: 'generateImage',
+                    description: 'Tạo hình ảnh nghệ thuật hoặc vẽ tranh dựa trên mô tả văn bản của người dùng (Text-to-Image).',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            prompt: { type: 'string', description: 'Mô tả chi tiết bức ảnh cần vẽ (Ví dụ: \'con mèo con màu cam đội mũ bảo hiểm\')' }
+                        },
+                        required: ['prompt']
+                    }
+                }
+            };
+            const imageGenGemini = {
+                name: 'generateImage',
+                description: 'Tạo hình ảnh nghệ thuật hoặc vẽ tranh dựa trên mô tả văn bản của người dùng (Text-to-Image).',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        prompt: { type: 'STRING', description: 'Mô tả chi tiết bức ảnh cần vẽ (Ví dụ: \'con mèo con màu cam đội mũ bảo hiểm\')' }
+                    },
+                    required: ['prompt']
+                }
+            };
+            activeOpenAITools.push(imageGenOpenAI);
+            if (activeGeminiTools[0] && activeGeminiTools[0].functionDeclarations) {
+                activeGeminiTools[0].functionDeclarations.push(imageGenGemini);
+            }
+        }
+
+        if (config.aiEnableWebSearch) {
+            // OpenAI / Anthropic / DeepSeek use the custom webSearch function
+            const webSearchOpenAI = {
+                type: 'function',
+                function: {
+                    name: 'webSearch',
+                    description: 'Tìm kiếm thông tin trực tuyến thời gian thực từ Internet khi người dùng hỏi về tin tức mới, sự kiện, thời tiết hoặc thông tin cần cập nhật.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            query: { type: 'string', description: 'Từ khóa tìm kiếm (Ví dụ: \'giá vàng SJC hôm nay\', \'thời tiết Đà Nẵng\')' }
+                        },
+                        required: ['query']
+                    }
+                }
+            };
+            const webSearchGemini = {
+                name: 'webSearch',
+                description: 'Tìm kiếm thông tin trực tuyến thời gian thực từ Internet khi người dùng hỏi về tin tức mới, sự kiện, thời tiết hoặc thông tin cần cập nhật.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        query: { type: 'STRING', description: 'Từ khóa tìm kiếm (Ví dụ: \'giá vàng SJC hôm nay\', \'thời tiết Đà Nẵng\')' }
+                    },
+                    required: ['query']
+                }
+            };
+            activeOpenAITools.push(webSearchOpenAI);
+            if (activeGeminiTools[0] && activeGeminiTools[0].functionDeclarations) {
+                activeGeminiTools[0].functionDeclarations.push(webSearchGemini);
+            }
+        }
+
+        if (config.aiEnableVideoAnalysis) {
+            const videoSearchOpenAI = {
+                type: 'function',
+                function: {
+                    name: 'searchVideo',
+                    description: 'Tìm kiếm video trên YouTube theo từ khóa để lấy đường dẫn xem video cho người dùng.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            query: { type: 'string', description: 'Từ khóa hoặc tiêu đề video cần tìm kiếm' }
+                        },
+                        required: ['query']
+                    }
+                }
+            };
+            const videoSearchGemini = {
+                name: 'searchVideo',
+                description: 'Tìm kiếm video trên YouTube theo từ khóa để lấy đường dẫn xem video cho người dùng.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        query: { type: 'STRING', description: 'Từ khóa hoặc tiêu đề video cần tìm kiếm' }
+                    },
+                    required: ['query']
+                }
+            };
+            activeOpenAITools.push(videoSearchOpenAI);
+            if (activeGeminiTools[0] && activeGeminiTools[0].functionDeclarations) {
+                activeGeminiTools[0].functionDeclarations.push(videoSearchGemini);
+            }
+        }
+    }
 
     if (threadId) {
         if (activeOpenAITools && activeOpenAITools.length > 0) {
@@ -137,7 +309,39 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
         let systemPrompt = config.aiSystemPrompt || 'Bạn là một trợ lý AI thân thiện, chuyên nghiệp trong nhóm chat Zalo. Khi trả lời, hãy dùng ngôn từ tự nhiên, gần gũi (xưng em/mình, gọi anh/chị/bạn), trả lời ngắn gọn, đi vào trọng tâm chat và luôn giữ thái độ nhiệt tình hỗ trợ.';
         systemPrompt += "\nTuyệt đối KHÔNG sử dụng các ký tự định dạng Markdown như **, *, _, `, ~~ trong câu trả lời. Hãy viết câu bằng văn bản thường hoàn chỉnh, mạch lạc, không bao giờ ngắt quãng lửng lơ giữa chừng.";
 
-        if (keys.length === 0) {
+        // Bổ sung thông tin phân quyền tương tác AI (API Control) vào System Prompt
+        let permissionPrompt = "\n\n[BẢNG KIỂM SOÁT TÍNH NĂNG TƯƠNG TÁC AI - API CONTROL]";
+        if (config.disableTools) {
+            permissionPrompt += "\nQUAN TRỌNG: Tất cả các tính năng tương tác tự động hiện đang bị TẮT hoàn toàn.";
+        } else {
+            const disabledToolsList = [];
+            const enabledToolsList = [];
+            
+            ZCA_TOOLS_RAW.forEach(t => {
+                const isEnabled = enabledToolsMap[t.name] !== false;
+                if (isEnabled) {
+                    enabledToolsList.push(`${t.name} (${t.desc})`);
+                } else {
+                    disabledToolsList.push(`${t.name} (${t.desc})`);
+                }
+            });
+
+            if (disabledToolsList.length > 0) {
+                permissionPrompt += `\nCÁC TÍNH NĂNG ĐANG BỊ TẮT QUYỀN TRUY CẬP (KHÔNG THỂ THỰC THI):
+${disabledToolsList.map(item => `- ${item}`).join('\n')}
+
+QUAN TRỌNG: Nếu người dùng yêu cầu thực hiện hành động thuộc các tính năng ĐANG BỊ TẮT ở trên, bạn KHÔNG ĐƯỢC gọi hàm (function call) tương ứng. Bạn phải giải thích lịch sự rằng tính năng này hiện đang bị tắt trong Bảng Kiểm Soát Tính Năng Tương Tác AI (API Control) trên giao diện Dashboard, và hướng dẫn họ bật lại quyền này nếu muốn sử dụng.`;
+            }
+
+            if (enabledToolsList.length > 0) {
+                permissionPrompt += `\n\nCÁC TÍNH NĂNG ĐANG ĐƯỢC BẬT QUYỀN TRUY CẬP (CÓ THỂ SỬ DỤNG):
+${enabledToolsList.map(item => `- ${item}`).join('\n')}`;
+            }
+        }
+        
+        systemPrompt += permissionPrompt;
+
+        if (keys.length === 0 && provider !== 'ollama') {
             console.error('ZaloClient AI: Chưa cấu hình API Key.');
             return null;
         }
@@ -179,11 +383,35 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
                 });
             }
 
+            const isReasoningModel = model.startsWith('o1') || model.startsWith('o3');
             const body = {
                 model: model,
-                messages: messages,
-                max_tokens: 1000
+                messages: messages
             };
+
+            if (isReasoningModel) {
+                body.max_completion_tokens = config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000;
+                
+                const isLegacyReasoning = model.startsWith('o1-mini') || model.startsWith('o1-preview');
+                if (!isLegacyReasoning) {
+                    body.temperature = config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 1.0;
+                    body.top_p = config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0;
+                }
+                
+                if ((model.startsWith('o1') || model.startsWith('o3')) && !isLegacyReasoning && config.aiReasoningEffort) {
+                    body.reasoning_effort = config.aiReasoningEffort;
+                }
+            } else {
+                body.max_tokens = config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000;
+                body.temperature = config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 0.7;
+                body.top_p = config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0;
+                if (config.aiFrequencyPenalty !== undefined) {
+                    body.frequency_penalty = parseFloat(config.aiFrequencyPenalty);
+                }
+                if (config.aiPresencePenalty !== undefined) {
+                    body.presence_penalty = parseFloat(config.aiPresencePenalty);
+                }
+            }
 
             if (activeOpenAITools && activeOpenAITools.length > 0) {
                 body.tools = activeOpenAITools;
@@ -219,7 +447,7 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
 
                     const latency = Date.now() - apiStart;
 
-                    if ((response.status === 429 || response.status === 503 || response.status === 404) && attempt < maxAttempts - 1) {
+                    if ((response.status === 429 || response.status === 503 || response.status === 404 || response.status === 403 || response.status === 400) && attempt < maxAttempts - 1) {
                         attempt++;
                         modelIndex++;
                         const nextModel = openaiFallbackModels[modelIndex % openaiFallbackModels.length];
@@ -311,7 +539,7 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
                     });
                 }
 
-                return await askAI(history, config, apiInstance, threadId, depth + 1);
+                return await executeAskAI(history, config, apiInstance, threadId, depth + 1);
             }
 
             return aiMessage.content;
@@ -396,39 +624,71 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
                 });
             }
 
+            const generationConfig = {
+                maxOutputTokens: config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000,
+                temperature: config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 0.7,
+                topP: config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0
+            };
+            if (config.aiTopK !== undefined) {
+                generationConfig.topK = parseInt(config.aiTopK);
+            }
+
             const body = {
                 contents: formattedContents,
                 systemInstruction: {
                     parts: [{ text: systemPrompt }]
                 },
-                generationConfig: {
-                    maxOutputTokens: 1000
-                }
+                generationConfig: generationConfig
             };
 
+            if (config.aiSafetySettings) {
+                const safetySettings = [];
+                const safetyMapping = {
+                    harassment: 'HARM_CATEGORY_HARASSMENT',
+                    hateSpeech: 'HARM_CATEGORY_HATE_SPEECH',
+                    sexuallyExplicit: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    dangerousContent: 'HARM_CATEGORY_DANGEROUS_CONTENT'
+                };
+                for (const [key, category] of Object.entries(safetyMapping)) {
+                    if (config.aiSafetySettings[key]) {
+                        safetySettings.push({
+                            category: category,
+                            threshold: config.aiSafetySettings[key]
+                        });
+                    }
+                }
+                if (safetySettings.length > 0) {
+                    body.safetySettings = safetySettings;
+                }
+            }
+
             if (activeGeminiTools && activeGeminiTools.length > 0) {
-                body.tools = activeGeminiTools;
+                body.tools = [...activeGeminiTools];
+                const hasFunctions = activeGeminiTools.some(t => t.functionDeclarations && t.functionDeclarations.length > 0);
+                if (config.aiEnableWebSearch && !hasFunctions) {
+                    body.tools.push({ googleSearch: {} });
+                }
             }
 
             let response;
             let attempt = 0;
             const geminiFallbackModels = [
                 'gemini-2.5-flash',
-                'gemini-2.5-flash-lite',
-                'gemini-1.5-flash',
-                'gemini-3-flash-preview',
-                'gemini-3.1-flash-lite-preview',
                 'gemini-2.5-pro',
+                'gemini-2.0-flash',
+                'gemini-2.0-flash-lite-preview-02-05',
+                'gemini-1.5-flash',
                 'gemini-1.5-pro'
             ];
-            if (!geminiFallbackModels.includes(model)) {
-                geminiFallbackModels.unshift(model);
+            const normalizedModel = model === 'gemini-2.0-flash-lite' ? 'gemini-2.0-flash-lite-preview-02-05' : model;
+            if (!geminiFallbackModels.includes(normalizedModel)) {
+                geminiFallbackModels.unshift(normalizedModel);
             }
             const maxAttempts = config.isBackground ? Math.max(keys.length, geminiFallbackModels.length) : Math.max(7, keys.length + 1);
             const backoffDelays = [2000, 5000, 10000];
             let currentKeyIndex = (globalGeminiIndex++) % keys.length;
             let modelIndex = 0;
-            let currentModel = model;
+            let currentModel = normalizedModel;
 
             while (attempt < maxAttempts) {
                 const currentApiKey = keys[currentKeyIndex];
@@ -446,7 +706,7 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
 
                     const latency = Date.now() - apiStart;
 
-                    if ((response.status === 429 || response.status === 503 || response.status === 404) && attempt < maxAttempts - 1) {
+                    if ((response.status === 429 || response.status === 503 || response.status === 404 || response.status === 403 || response.status === 400) && attempt < maxAttempts - 1) {
                         attempt++;
                         modelIndex++;
                         const nextModel = geminiFallbackModels[modelIndex % geminiFallbackModels.length];
@@ -566,10 +826,215 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
                     });
                 }
 
-                return await askAI(history, config, apiInstance, threadId, depth + 1);
+                return await executeAskAI(history, config, apiInstance, threadId, depth + 1);
             }
 
             return textAnswer || null;
+        } else if (provider === 'anthropic') {
+            // Anthropic Claude
+            const system = systemPrompt;
+            const messages = [];
+
+            for (const msg of history) {
+                if (msg.role === 'system') continue;
+                messages.push({
+                    role: msg.role === 'assistant' ? 'assistant' : 'user',
+                    content: msg.content
+                });
+            }
+
+            if (messages.length === 0) {
+                messages.push({ role: 'user', content: 'Hello' });
+            }
+
+            const body = {
+                model: model,
+                system: system,
+                messages: messages,
+                max_tokens: config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000,
+                temperature: config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 0.7,
+                top_p: config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0
+            };
+
+            let response;
+            let attempt = 0;
+            const maxAttempts = keys.length;
+            let currentKeyIndex = 0;
+
+            while (attempt < maxAttempts) {
+                const currentApiKey = keys[currentKeyIndex];
+                try {
+                    response = await fetch('https://api.anthropic.com/v1/messages', {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': currentApiKey,
+                            'anthropic-version': '2023-06-01',
+                            'content-type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+
+                    if (response.ok) {
+                        break;
+                    }
+
+                    if ((response.status === 429 || response.status >= 500) && attempt < maxAttempts - 1) {
+                        attempt++;
+                        currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+                        logger.warn('api', `[AI Key Pool] Rotating Anthropic key to index ${currentKeyIndex} immediately (Attempt ${attempt})...`);
+                        continue;
+                    }
+                    break;
+                } catch (fetchErr) {
+                    if (attempt < maxAttempts - 1) {
+                        attempt++;
+                        currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+                        logger.warn('api', `[AI Key Pool] Anthropic Network error. Rotating key to index ${currentKeyIndex} immediately (Attempt ${attempt})...`);
+                        continue;
+                    }
+                    throw fetchErr;
+                }
+            }
+
+            if (!response.ok) {
+                const errText = await response.text();
+                logger.error('api', `Anthropic API Error: HTTP ${response.status}`, { error: errText });
+                return null;
+            }
+
+            const data = await response.json();
+            const textPart = data.content && data.content.find(c => c.type === 'text');
+            return textPart ? textPart.text : null;
+
+        } else if (provider === 'deepseek') {
+            // DeepSeek API (OpenAI-compatible)
+            const messages = [
+                { role: 'system', content: systemPrompt }
+            ];
+            for (const msg of history) {
+                messages.push({
+                    role: msg.role,
+                    content: msg.content
+                });
+            }
+
+            const isReasoningModel = model === 'deepseek-reasoner';
+            const body = {
+                model: model,
+                messages: messages
+            };
+
+            if (isReasoningModel) {
+                body.max_tokens = config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000;
+            } else {
+                body.max_tokens = config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000;
+                body.temperature = config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 0.7;
+                body.top_p = config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0;
+                if (config.aiFrequencyPenalty !== undefined) {
+                    body.frequency_penalty = parseFloat(config.aiFrequencyPenalty);
+                }
+                if (config.aiPresencePenalty !== undefined) {
+                    body.presence_penalty = parseFloat(config.aiPresencePenalty);
+                }
+            }
+
+            let response;
+            let attempt = 0;
+            const maxAttempts = keys.length;
+            let currentKeyIndex = 0;
+
+            while (attempt < maxAttempts) {
+                const currentApiKey = keys[currentKeyIndex];
+                try {
+                    response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${currentApiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+
+                    if (response.ok) {
+                        break;
+                    }
+
+                    if ((response.status === 429 || response.status >= 500) && attempt < maxAttempts - 1) {
+                        attempt++;
+                        currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+                        logger.warn('api', `[AI Key Pool] Rotating DeepSeek key to index ${currentKeyIndex} immediately (Attempt ${attempt})...`);
+                        continue;
+                    }
+                    break;
+                } catch (fetchErr) {
+                    if (attempt < maxAttempts - 1) {
+                        attempt++;
+                        currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+                        logger.warn('api', `[AI Key Pool] DeepSeek Network error. Rotating key to index ${currentKeyIndex} immediately (Attempt ${attempt})...`);
+                        continue;
+                    }
+                    throw fetchErr;
+                }
+            }
+
+            if (!response.ok) {
+                const errText = await response.text();
+                logger.error('api', `DeepSeek API Error: HTTP ${response.status}`, { error: errText });
+                return null;
+            }
+
+            const data = await response.json();
+            const aiMessage = data.choices && data.choices[0] && data.choices[0].message;
+            return aiMessage ? aiMessage.content : null;
+
+        } else if (provider === 'ollama') {
+            // Ollama Local Chat API
+            const messages = [
+                { role: 'system', content: systemPrompt }
+            ];
+            for (const msg of history) {
+                messages.push({
+                    role: msg.role === 'assistant' ? 'assistant' : 'user',
+                    content: msg.content
+                });
+            }
+
+            const options = {
+                temperature: config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 0.7,
+                top_p: config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0,
+                num_predict: config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000
+            };
+            if (config.aiTopK !== undefined) {
+                options.top_k = parseInt(config.aiTopK);
+            }
+            if (config.aiFrequencyPenalty !== undefined) {
+                options.repeat_penalty = parseFloat(config.aiFrequencyPenalty);
+            }
+
+            const body = {
+                model: model,
+                messages: messages,
+                stream: false,
+                options: options
+            };
+
+            const ollamaUrl = config.aiOllamaUrl || 'http://localhost:11434';
+            const response = await fetch(`${ollamaUrl}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                logger.error('api', `Ollama API Error: HTTP ${response.status}`, { error: errText });
+                return null;
+            }
+
+            const data = await response.json();
+            return data.message ? data.message.content : null;
         }
 
         return null;
