@@ -1,6 +1,6 @@
 {
   "message": {
-    "successes": 258,
+    "successes": 259,
     "errors": 1
   },
   "sendMessage": {
@@ -32,7 +32,7 @@
     "errors": 0
   },
   "addReaction": {
-    "successes": 5,
+    "successes": 6,
     "errors": 0
   }
 }
