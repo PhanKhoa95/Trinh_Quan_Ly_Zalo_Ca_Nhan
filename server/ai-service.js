@@ -32,7 +32,7 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
     const pool = config.aiApiKeyPool;
     const isObject = pool && typeof pool === 'object' && !Array.isArray(pool);
     
-    const possibleProviders = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama'];
+    const possibleProviders = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama', 'ollama-online'];
     possibleProviders.forEach(p => {
         if (p === primaryProvider) return;
         
@@ -72,6 +72,7 @@ async function askAI(history, config, apiInstance = null, threadId = null, depth
                 else if (provider === 'anthropic') tempConfig.aiModel = 'claude-3-5-haiku-latest';
                 else if (provider === 'deepseek') tempConfig.aiModel = 'deepseek-chat';
                 else if (provider === 'ollama') tempConfig.aiModel = 'llama3';
+                else if (provider === 'ollama-online') tempConfig.aiModel = 'llama3';
             }
             
             const result = await executeAskAI(history, tempConfig, apiInstance, threadId, depth);
@@ -341,7 +342,7 @@ ${enabledToolsList.map(item => `- ${item}`).join('\n')}`;
         
         systemPrompt += permissionPrompt;
 
-        if (keys.length === 0 && provider !== 'ollama') {
+        if (keys.length === 0 && provider !== 'ollama' && provider !== 'ollama-online') {
             console.error('ZaloClient AI: Chưa cấu hình API Key.');
             return null;
         }
@@ -1035,6 +1036,116 @@ ${enabledToolsList.map(item => `- ${item}`).join('\n')}`;
 
             const data = await response.json();
             return data.message ? data.message.content : null;
+
+        } else if (provider === 'ollama-online') {
+            // Ollama Online (Cloud) - Hỗ trợ cả OpenAI-compatible và Ollama native API
+            const ollamaOnlineUrl = config.aiOllamaOnlineUrl || '';
+            if (!ollamaOnlineUrl) {
+                logger.error('api', 'Ollama Online: Chưa cấu hình Server URL.');
+                return null;
+            }
+
+            const apiMode = config.aiOllamaOnlineApiMode || 'openai-compat';
+            const apiKey = keys[0] || '';
+
+            const messages = [
+                { role: 'system', content: systemPrompt }
+            ];
+            for (const msg of history) {
+                messages.push({
+                    role: msg.role === 'assistant' ? 'assistant' : 'user',
+                    content: msg.content
+                });
+            }
+
+            if (apiMode === 'openai-compat') {
+                // Chế độ OpenAI-compatible: /v1/chat/completions
+                const body = {
+                    model: model,
+                    messages: messages,
+                    temperature: config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 0.7,
+                    top_p: config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0,
+                    max_tokens: config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000
+                };
+                if (config.aiFrequencyPenalty !== undefined) {
+                    body.frequency_penalty = parseFloat(config.aiFrequencyPenalty);
+                }
+                if (config.aiPresencePenalty !== undefined) {
+                    body.presence_penalty = parseFloat(config.aiPresencePenalty);
+                }
+
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (apiKey) {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+
+                const endpoint = ollamaOnlineUrl.replace(/\/+$/, '') + '/v1/chat/completions';
+                logger.info('api', `Ollama Online (OpenAI-compat): Gọi ${endpoint}, model: ${model}`);
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    logger.error('api', `Ollama Online API Error: HTTP ${response.status}`, { error: errText });
+                    return null;
+                }
+
+                const data = await response.json();
+                const aiMessage = data.choices && data.choices[0] && data.choices[0].message;
+                return aiMessage ? aiMessage.content : null;
+
+            } else {
+                // Chế độ Ollama Native: /api/chat
+                const options = {
+                    temperature: config.aiTemperature !== undefined ? parseFloat(config.aiTemperature) : 0.7,
+                    top_p: config.aiTopP !== undefined ? parseFloat(config.aiTopP) : 1.0,
+                    num_predict: config.aiMaxTokens !== undefined ? parseInt(config.aiMaxTokens) : 1000
+                };
+                if (config.aiTopK !== undefined) {
+                    options.top_k = parseInt(config.aiTopK);
+                }
+                if (config.aiFrequencyPenalty !== undefined) {
+                    options.repeat_penalty = parseFloat(config.aiFrequencyPenalty);
+                }
+
+                const body = {
+                    model: model,
+                    messages: messages,
+                    stream: false,
+                    options: options
+                };
+
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (apiKey) {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+
+                const endpoint = ollamaOnlineUrl.replace(/\/+$/, '') + '/api/chat';
+                logger.info('api', `Ollama Online (Native): Gọi ${endpoint}, model: ${model}`);
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    logger.error('api', `Ollama Online API Error: HTTP ${response.status}`, { error: errText });
+                    return null;
+                }
+
+                const data = await response.json();
+                return data.message ? data.message.content : null;
+            }
         }
 
         return null;
