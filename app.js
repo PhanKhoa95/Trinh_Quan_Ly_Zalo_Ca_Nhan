@@ -3203,17 +3203,17 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const OLLAMA_ONLINE_MODELS = [
-        { value: 'gemma4', text: 'gemma4 (Google - Rất mạnh 🔥)' },
-        { value: 'llama3', text: 'llama3 (Meta - Phổ biến)' },
-        { value: 'llama3.1', text: 'llama3.1 (Nâng cấp mới)' },
-        { value: 'llama3.2', text: 'llama3.2 (Mới nhất)' },
-        { value: 'mistral', text: 'mistral (Thông minh & Gọn nhẹ)' },
-        { value: 'mixtral', text: 'mixtral (Mạnh mẽ - MoE)' },
-        { value: 'qwen2.5', text: 'qwen2.5 (Mạnh mẽ về ngôn ngữ)' },
-        { value: 'gemma2', text: 'gemma2 (Google - Nhẹ & Nhanh)' },
-        { value: 'phi3', text: 'phi3 (Microsoft - Nhỏ gọn)' },
-        { value: 'deepseek-r1', text: 'deepseek-r1 (Lập luận mạnh)' },
-        { value: 'command-r', text: 'command-r (Cohere - RAG tốt)' },
+        { value: 'gemma3:12b', text: 'gemma3:12b (Google - Rất mạnh 🔥)' },
+        { value: 'gemma4', text: 'gemma4 (Google - Thế hệ mới 🔥)' },
+        { value: 'deepseek-v4-flash', text: 'deepseek-v4-flash (DeepSeek V4 - Siêu nhanh)' },
+        { value: 'kimi-k2.6', text: 'kimi-k2.6 (Moonshot - Lập luận mạnh)' },
+        { value: 'nemotron-3-super', text: 'nemotron-3-super (NVIDIA - Mạnh mẽ)' },
+        { value: 'qwen3-coder-next', text: 'qwen3-coder-next (Alibaba - Code tốt)' },
+        { value: 'minimax-m2.5', text: 'minimax-m2.5 (MiniMax - Đa năng)' },
+        { value: 'gemini-3-flash-preview', text: 'gemini-3-flash-preview (Google - Nhanh)' },
+        { value: 'devstral-small-2:24b', text: 'devstral-small-2:24b (Mistral - Code)' },
+        { value: 'ministral-3:14b', text: 'ministral-3:14b (Mistral - Nhỏ gọn)' },
+        { value: 'gpt-oss:20b', text: 'gpt-oss:20b (OpenAI OSS)' },
         { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
     ];
 
