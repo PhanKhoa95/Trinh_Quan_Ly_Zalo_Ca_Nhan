@@ -2984,7 +2984,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     gemini: config.aiProvider === 'gemini' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
                     anthropic: config.aiProvider === 'anthropic' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
                     deepseek: config.aiProvider === 'deepseek' && Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool : [],
-                    ollama: []
+                    ollama: [],
+                    'ollama-online': []
                 };
 
                 const activeProvider = config.aiProvider || 'openai';
@@ -2994,6 +2995,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('ai-trigger-prefix').value = config.aiTriggerPrefix;
                 if (document.getElementById('ai-ollama-url')) {
                     document.getElementById('ai-ollama-url').value = config.aiOllamaUrl || 'http://localhost:11434';
+                }
+                if (document.getElementById('ai-ollama-online-url')) {
+                    document.getElementById('ai-ollama-online-url').value = config.aiOllamaOnlineUrl || '';
+                }
+                if (document.getElementById('ai-ollama-online-api-mode')) {
+                    document.getElementById('ai-ollama-online-api-mode').value = config.aiOllamaOnlineApiMode || 'openai-compat';
                 }
                 
                 if (document.getElementById('ai-temperature')) {
@@ -3195,6 +3202,20 @@ document.addEventListener('DOMContentLoaded', () => {
         { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
     ];
 
+    const OLLAMA_ONLINE_MODELS = [
+        { value: 'llama3', text: 'llama3 (Mặc định)' },
+        { value: 'llama3.1', text: 'llama3.1 (Nâng cấp mới)' },
+        { value: 'llama3.2', text: 'llama3.2 (Mới nhất)' },
+        { value: 'mistral', text: 'mistral (Thông minh & Gọn nhẹ)' },
+        { value: 'mixtral', text: 'mixtral (Mạnh mẽ - MoE)' },
+        { value: 'qwen2.5', text: 'qwen2.5 (Mạnh mẽ về ngôn ngữ)' },
+        { value: 'gemma2', text: 'gemma2 (Google - Nhẹ & Nhanh)' },
+        { value: 'phi3', text: 'phi3 (Microsoft - Nhỏ gọn)' },
+        { value: 'deepseek-r1', text: 'deepseek-r1 (Lập luận mạnh)' },
+        { value: 'command-r', text: 'command-r (Cohere - RAG tốt)' },
+        { value: 'custom', text: 'Khác (Tự nhập thủ công...)' }
+    ];
+
     function toggleModelConfigOptions() {
         const provider = aiProviderSelect ? aiProviderSelect.value : 'openai';
         const modelValue = aiModelSelect && aiModelSelect.value === 'custom' ? (aiModelInput ? aiModelInput.value : '') : (aiModelSelect ? aiModelSelect.value : '');
@@ -3203,6 +3224,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const ollamaUrlContainer = document.getElementById('ollama-url-container');
         if (ollamaUrlContainer) {
             ollamaUrlContainer.style.display = provider === 'ollama' ? 'block' : 'none';
+        }
+
+        // 1b. Toggle Ollama Online config container
+        const ollamaOnlineConfigContainer = document.getElementById('ollama-online-config-container');
+        if (ollamaOnlineConfigContainer) {
+            ollamaOnlineConfigContainer.style.display = provider === 'ollama-online' ? 'block' : 'none';
         }
 
         // 2. Toggle Advanced Options Panels
@@ -3269,10 +3296,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (label) label.textContent = 'Repeat Penalty (Tần suất lặp)';
             }
             if (presContainer) presContainer.style.display = 'none';
+        } else if (provider === 'ollama-online') {
+            const apiMode = document.getElementById('ai-ollama-online-api-mode');
+            if (apiMode && apiMode.value === 'openai-compat') {
+                // OpenAI-compat mode: giống OpenAI
+                openaiAdvanced.style.display = 'flex';
+            } else {
+                // Native mode: giống Ollama local
+                openaiAdvanced.style.display = 'flex';
+                if (freqContainer) {
+                    const label = freqContainer.querySelector('label');
+                    if (label) label.textContent = 'Repeat Penalty (Tần suất lặp)';
+                }
+                if (presContainer) presContainer.style.display = 'none';
+            }
         }
 
         // Restore repeat penalty label for non-ollama
-        if (provider !== 'ollama' && freqContainer) {
+        if (provider !== 'ollama' && provider !== 'ollama-online' && freqContainer) {
             const label = freqContainer.querySelector('label');
             if (label) label.textContent = 'Frequency Penalty (Tránh lặp từ)';
         }
@@ -3283,6 +3324,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const query = new URLSearchParams({ provider });
             if (apiKey) query.append('apiKey', apiKey);
             if (ollamaUrl) query.append('ollamaUrl', ollamaUrl);
+            if (provider === 'ollama-online') {
+                const onlineUrl = document.getElementById('ai-ollama-online-url') ? document.getElementById('ai-ollama-online-url').value : '';
+                if (onlineUrl) query.append('ollamaOnlineUrl', onlineUrl);
+            }
 
             const res = await fetch(`${BACKEND_URL}/api/ai/models?${query.toString()}`);
             const json = await res.json();
@@ -3304,7 +3349,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ollamaUrl = document.getElementById('ai-ollama-url') ? document.getElementById('ai-ollama-url').value : 'http://localhost:11434';
         
         let fetchedModels = null;
-        if (provider === 'ollama' || apiKey) {
+        if (provider === 'ollama' || provider === 'ollama-online' || apiKey) {
             fetchedModels = await fetchProviderModels(provider, apiKey, ollamaUrl);
         }
         
@@ -3315,6 +3360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (provider === 'anthropic') defaultModels = ANTHROPIC_MODELS;
             else if (provider === 'deepseek') defaultModels = DEEPSEEK_MODELS;
             else if (provider === 'ollama') defaultModels = OLLAMA_MODELS;
+            else if (provider === 'ollama-online') defaultModels = OLLAMA_ONLINE_MODELS;
             models = defaultModels;
         } else {
             // Append "Khác (Tự nhập thủ công...)" option
@@ -3363,6 +3409,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (provider === 'anthropic') targetModel = 'claude-3-5-sonnet-latest';
             else if (provider === 'deepseek') targetModel = 'deepseek-chat';
             else if (provider === 'ollama') targetModel = 'llama3';
+            else if (provider === 'ollama-online') targetModel = 'llama3';
         }
         
         await populateModelOptions(provider, targetModel);
@@ -3428,6 +3475,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Auto-update when Ollama Online URL or API mode changes
+    const aiOllamaOnlineUrlInput = document.getElementById('ai-ollama-online-url');
+    if (aiOllamaOnlineUrlInput) {
+        aiOllamaOnlineUrlInput.addEventListener('change', () => {
+            if (aiProviderSelect && aiProviderSelect.value === 'ollama-online') {
+                const currentModel = aiModelSelect ? aiModelSelect.value : '';
+                populateModelOptions('ollama-online', currentModel);
+            }
+        });
+    }
+    const aiOllamaOnlineApiModeSelect = document.getElementById('ai-ollama-online-api-mode');
+    if (aiOllamaOnlineApiModeSelect) {
+        aiOllamaOnlineApiModeSelect.addEventListener('change', () => {
+            toggleModelConfigOptions();
+        });
+    }
+
     // Bind AI Integration Form Submit
     const aiForm = document.getElementById('ai-integration-form');
     if (aiForm) {
@@ -3458,6 +3522,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const aiTopK = document.getElementById('ai-topk') ? parseInt(document.getElementById('ai-topk').value) : 40;
             const aiReasoningEffort = document.getElementById('ai-reasoning-effort') ? document.getElementById('ai-reasoning-effort').value : 'medium';
             const aiOllamaUrl = document.getElementById('ai-ollama-url') ? document.getElementById('ai-ollama-url').value : 'http://localhost:11434';
+            const aiOllamaOnlineUrl = document.getElementById('ai-ollama-online-url') ? document.getElementById('ai-ollama-online-url').value : '';
+            const aiOllamaOnlineApiMode = document.getElementById('ai-ollama-online-api-mode') ? document.getElementById('ai-ollama-online-api-mode').value : 'openai-compat';
 
             const aiEnableImageGen = document.getElementById('ai-enable-image-gen') ? document.getElementById('ai-enable-image-gen').checked : false;
             const aiEnableWebSearch = document.getElementById('ai-enable-web-search') ? document.getElementById('ai-enable-web-search').checked : false;
@@ -3499,6 +3565,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     aiTopK,
                     aiReasoningEffort,
                     aiOllamaUrl,
+                    aiOllamaOnlineUrl,
+                    aiOllamaOnlineApiMode,
                     aiEnableImageGen,
                     aiEnableWebSearch,
                     aiEnableVideoAnalysis,
