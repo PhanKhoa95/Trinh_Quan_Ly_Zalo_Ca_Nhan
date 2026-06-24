@@ -1504,6 +1504,65 @@ app.post('/api/ai/config/test', async (req, res) => {
                 const errMsg = errData.error?.message || `Mã lỗi HTTP ${response.status}`;
                 res.status(response.status).json({ success: false, error: `Gemini trả về lỗi: ${errMsg}` });
             }
+        } else if (provider === 'ollama-online') {
+            // Ollama Online (Cloud) test
+            const ollamaOnlineUrl = currentConfig.aiOllamaOnlineUrl || '';
+            if (!ollamaOnlineUrl) {
+                return res.status(400).json({ success: false, error: 'Chưa cấu hình Ollama Online Server URL.' });
+            }
+            const apiMode = currentConfig.aiOllamaOnlineApiMode || 'openai-compat';
+            const headers = { 'Content-Type': 'application/json' };
+            if (keyToUse && !keyToUse.includes('...') && keyToUse !== '********') {
+                headers['Authorization'] = `Bearer ${keyToUse}`;
+            }
+
+            if (apiMode === 'openai-compat') {
+                const endpoint = ollamaOnlineUrl.replace(/\/+$/, '') + '/v1/chat/completions';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: 'Xin chào! Hãy phản hồi cực kỳ ngắn gọn (dưới 10 từ) để xác nhận kết nối thành công.' }
+                        ],
+                        max_tokens: 50
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                    res.json({ success: true, message: `Kết nối đến Ollama Online (OpenAI-compat) thành công!`, reply: reply || 'Không có phản hồi' });
+                } else {
+                    const errText = await response.text();
+                    res.status(response.status).json({ success: false, error: `Ollama Online trả về lỗi: HTTP ${response.status} - ${errText.substring(0, 200)}` });
+                }
+            } else {
+                // Ollama Native mode
+                const endpoint = ollamaOnlineUrl.replace(/\/+$/, '') + '/api/chat';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: 'Xin chào! Hãy phản hồi cực kỳ ngắn gọn (dưới 10 từ) để xác nhận kết nối thành công.' }
+                        ],
+                        stream: false,
+                        options: { num_predict: 50 }
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const reply = data.message ? data.message.content : 'Không có phản hồi';
+                    res.json({ success: true, message: `Kết nối đến Ollama Online (Native) thành công!`, reply });
+                } else {
+                    const errText = await response.text();
+                    res.status(response.status).json({ success: false, error: `Ollama Online trả về lỗi: HTTP ${response.status} - ${errText.substring(0, 200)}` });
+                }
+            }
         } else {
             res.status(400).json({ success: false, error: 'Nhà cung cấp không hỗ trợ.' });
         }
