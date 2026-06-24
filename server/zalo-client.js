@@ -261,6 +261,28 @@ class ZaloClientWrapper {
         }
     }
 
+    // Dọn dẹp kết nối và giải phóng tài nguyên
+    async destroy() {
+        if (this.isSimulation) {
+            console.log(`[Simulated Client ${this.accountId}] Đóng kết nối giả lập...`);
+            this.isLoggedIn = false;
+            return;
+        }
+
+        logger.info('zalo', `Đang đóng kết nối Zalo cho SĐT ${this.phone}...`);
+        if (this.api && this.api.listener) {
+            try {
+                this.api.listener.stop();
+                logger.info('zalo', `Đã dừng listener cho SĐT ${this.phone}`);
+            } catch (err) {
+                logger.error('zalo', `Lỗi khi dừng listener cho SĐT ${this.phone}: ${err.message}`);
+            }
+        }
+        this.isLoggedIn = false;
+        this.api = null;
+        this.zalo = null;
+    }
+
     // Đăng ký tất cả các bộ lắng nghe sự kiện từ Zalo SDK
     _setupListeners(onMessage) {
         if (!this.api || !this.api.listener) return;
