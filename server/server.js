@@ -1680,8 +1680,10 @@ app.post('/api/ai/keys/bulk-import', async (req, res) => {
                 provider = 'gemini';
             } else if (k.startsWith('sk-ant-')) {
                 provider = 'anthropic';
-            } else if (k.startsWith('sk-proj-') || k.startsWith('sk-admin-') || k.startsWith('sk-or-')) {
-                provider = 'openai';
+            } else if (k.startsWith('gsk_')) {
+                provider = 'openai'; // Groq API Key (OpenAI-compatible endpoint)
+            } else if (k.startsWith('sk-or-') || k.startsWith('sk-proj-') || k.startsWith('sk-admin-')) {
+                provider = 'openai'; // OpenRouter / OpenAI Key
             } else if (k.startsWith('sk-ds-') || /^sk-[a-f0-9]{32}$/i.test(k)) {
                 provider = 'deepseek';
             } else if (k.startsWith('sk-') && k.length >= 30) {
