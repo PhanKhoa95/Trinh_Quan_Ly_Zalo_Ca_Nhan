@@ -27,52 +27,57 @@ async function downloadImageAsBase64(url) {
  */
 async function askAI(history, config, apiInstance = null, threadId = null, depth = 0) {
     const primaryProvider = config.aiProvider || 'openai';
+    
+    // Thu tu uu tien cac nha cung cap AI
+    const defaultPriority = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama-online', 'ollama'];
+    const configuredPriority = Array.isArray(config.aiProviderPriority) && config.aiProviderPriority.length > 0
+        ? config.aiProviderPriority
+        : defaultPriority;
+
     const providersToTry = [primaryProvider];
-    
-    const pool = config.aiApiKeyPool;
-    const isObject = pool && typeof pool === 'object' && !Array.isArray(pool);
-    
-    const possibleProviders = ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama', 'ollama-online'];
-    possibleProviders.forEach(p => {
-        if (p === primaryProvider) return;
-        
-        let hasKeys = false;
-        if (isObject) {
-            hasKeys = Array.isArray(pool[p]) && pool[p].filter(k => k).length > 0;
-        }
-        if (p === 'ollama') hasKeys = true;
-        
-        if (hasKeys) {
+    configuredPriority.forEach(p => {
+        if (!providersToTry.includes(p)) {
             providersToTry.push(p);
         }
     });
+    
+    const pool = config.aiApiKeyPool;
+    const isObject = pool && typeof pool === 'object' && !Array.isArray(pool);
 
     let lastError = null;
     for (const provider of providersToTry) {
         try {
+            let keysForProvider = [];
+            if (isObject) {
+                keysForProvider = (pool[provider] || []).filter(k => k);
+            } else if (provider === primaryProvider) {
+                keysForProvider = Array.isArray(config.aiApiKeyPool) ? config.aiApiKeyPool.filter(k => k) : (config.aiApiKey ? [config.aiApiKey] : []);
+            }
+
+            // Bo qua provider neu khong co Key (tru local Ollama)
+            if (keysForProvider.length === 0 && provider !== 'ollama' && provider !== 'ollama-online') {
+                continue;
+            }
+
             logger.info('api', `[AI Failover] Đang thử gọi AI với nhà cung cấp: ${provider}`);
             
             const tempConfig = { ...config, aiProvider: provider };
+            tempConfig.aiApiKeyPool = keysForProvider;
+            tempConfig.aiApiKey = keysForProvider[0] || '';
             
-            // Trích xuất key cho provider này
-            if (isObject) {
-                tempConfig.aiApiKeyPool = pool[provider] || [];
-                tempConfig.aiApiKey = tempConfig.aiApiKeyPool[0] || '';
+            // Xac dinh danh sach model fallback cho provider nay
+            const modelPool = config.aiModelPool && typeof config.aiModelPool === 'object' ? config.aiModelPool[provider] : null;
+            if (provider === primaryProvider && config.aiModel) {
+                tempConfig.aiModel = config.aiModel;
+            } else if (Array.isArray(modelPool) && modelPool.length > 0) {
+                tempConfig.aiModel = modelPool[0];
             } else {
-                if (provider !== primaryProvider) {
-                    tempConfig.aiApiKeyPool = [];
-                    tempConfig.aiApiKey = '';
-                }
-            }
-            
-            // Đặt model mặc định cho provider backup
-            if (provider !== primaryProvider) {
                 if (provider === 'openai') tempConfig.aiModel = 'gpt-4o-mini';
-                else if (provider === 'gemini') tempConfig.aiModel = 'gemini-1.5-flash';
+                else if (provider === 'gemini') tempConfig.aiModel = 'gemini-2.5-flash';
                 else if (provider === 'anthropic') tempConfig.aiModel = 'claude-3-5-haiku-latest';
                 else if (provider === 'deepseek') tempConfig.aiModel = 'deepseek-chat';
-                else if (provider === 'ollama') tempConfig.aiModel = 'llama3';
-                else if (provider === 'ollama-online') tempConfig.aiModel = 'llama3';
+                else if (provider === 'ollama') tempConfig.aiModel = 'llama3.3';
+                else if (provider === 'ollama-online') tempConfig.aiModel = 'llama3.3';
             }
             
             const result = await executeAskAI(history, tempConfig, apiInstance, threadId, depth);
@@ -673,15 +678,19 @@ ${enabledToolsList.map(item => `- ${item}`).join('\n')}`;
 
             let response;
             let attempt = 0;
-            const geminiFallbackModels = [
+            const customGeminiPool = config.aiModelPool && Array.isArray(config.aiModelPool.gemini) && config.aiModelPool.gemini.length > 0
+                ? config.aiModelPool.gemini
+                : null;
+            const geminiFallbackModels = customGeminiPool || [
                 'gemini-2.5-flash',
                 'gemini-2.5-pro',
                 'gemini-2.0-flash',
-                'gemini-2.0-flash-lite-preview-02-05',
-                'gemini-1.5-flash',
-                'gemini-1.5-pro'
+                'gemini-2.0-flash-lite'
             ];
-            const normalizedModel = model === 'gemini-2.0-flash-lite' ? 'gemini-2.0-flash-lite-preview-02-05' : model;
+            const normalizedModel = model;
+            if (!geminiFallbackModels.includes(normalizedModel)) {
+                geminiFallbackModels.unshift(normalizedModel);
+            }
             if (!geminiFallbackModels.includes(normalizedModel)) {
                 geminiFallbackModels.unshift(normalizedModel);
             }
