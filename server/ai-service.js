@@ -19,8 +19,72 @@ async function downloadImageAsBase64(url) {
         logger.error('zalo', 'Lỗi khi tải và encode hình ảnh từ URL:', { error: err.message, url });
         return null;
     }
-}
+const liveModelsCache = {
+    gemini: { timestamp: 0, models: [] },
+    openai: { timestamp: 0, models: [] },
+    anthropic: { timestamp: 0, models: [] },
+    deepseek: { timestamp: 0, models: [] }
+};
+const CACHE_TTL_MS = 30 * 60 * 1000;
 
+/**
+ * Tự động truy vấn và lấy danh sách Model đang hoạt động Realtime từ API Server của Nhà Cung Cấp
+ */
+async function getLiveModelsForProvider(provider, apiKey) {
+    const now = Date.now();
+    const cached = liveModelsCache[provider];
+    if (cached && cached.models && cached.models.length > 0 && (now - cached.timestamp < CACHE_TTL_MS)) {
+        return cached.models;
+    }
+
+    try {
+        if (provider === 'gemini' && apiKey && !apiKey.includes('dummy')) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && Array.isArray(data.models)) {
+                    const fetchedModels = data.models
+                        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+                        .map(m => m.name.replace(/^models\//, ''))
+                        .filter(m => m.startsWith('gemini-') && !m.includes('vision') && !m.includes('embedding') && !m.includes('audio') && !m.includes('imagen'));
+                    
+                    if (fetchedModels.length > 0) {
+                        logger.info('api', `[Realtime Model Discovery] Đã phát hiện ${fetchedModels.length} Gemini Models Realtime từ Google Cloud Server:`, fetchedModels);
+                        liveModelsCache.gemini = { timestamp: now, models: fetchedModels };
+                        return fetchedModels;
+                    }
+                }
+            }
+        } else if (provider === 'openai' && apiKey && !apiKey.includes('dummy')) {
+            const url = 'https://api.openai.com/v1/models';
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && Array.isArray(data.data)) {
+                    const fetchedModels = data.data
+                        .map(m => m.id)
+                        .filter(id => (id.startsWith('gpt-') || id.startsWith('o1') || id.startsWith('o3')) && !id.includes('realtime') && !id.includes('audio') && !id.includes('transcription') && !id.includes('tts'));
+                    
+                    if (fetchedModels.length > 0) {
+                        logger.info('api', `[Realtime Model Discovery] Đã phát hiện ${fetchedModels.length} OpenAI Models Realtime từ Server:`, fetchedModels);
+                        liveModelsCache.openai = { timestamp: now, models: fetchedModels };
+                        return fetchedModels;
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        logger.warn('api', `Lỗi truy vấn Live Models Realtime cho provider ${provider}: ${err.message}`);
+    }
+
+    // Fallback static 2026 models neu khong lay duoc tu server
+    if (provider === 'gemini') return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+    if (provider === 'openai') return ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'];
+    if (provider === 'anthropic') return ['claude-3-5-haiku-latest', 'claude-3-5-sonnet-latest'];
+    if (provider === 'deepseek') return ['deepseek-chat', 'deepseek-reasoner'];
+    return ['llama3.3'];
+}
 
 /**
  * Gửi yêu cầu AI và điều phối việc sinh nội dung hoặc gọi hàm (Có hỗ trợ tự động failover sang nhà cung cấp khác khi lỗi)
@@ -1126,5 +1190,6 @@ async function analyzeSentiment(history, config) {
 module.exports = {
     downloadImageAsBase64,
     askAI,
-    analyzeSentiment
+    analyzeSentiment,
+    getLiveModelsForProvider
 };

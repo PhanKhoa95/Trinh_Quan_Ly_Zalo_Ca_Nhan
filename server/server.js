@@ -1730,6 +1730,30 @@ app.post('/api/ai/keys/bulk-import', async (req, res) => {
     }
 });
 
+// Truy vấn danh sách Model Realtime cập nhật trực tiếp từ Server của Nhà Cung Cấp
+app.get('/api/ai/models/live', async (req, res) => {
+    try {
+        const provider = req.query.provider || 'gemini';
+        let currentConfig = await aiSettingsDb.findOne({}) || {};
+        const pool = currentConfig.aiApiKeyPool || {};
+        const providerKeys = Array.isArray(pool[provider]) ? pool[provider] : [];
+        const apiKey = req.query.key || providerKeys[0] || '';
+
+        const { getLiveModelsForProvider } = require('./ai-service');
+        const liveModels = await getLiveModelsForProvider(provider, apiKey);
+
+        res.json({
+            success: true,
+            provider,
+            count: liveModels.length,
+            models: liveModels,
+            source: 'realtime_api_discovery'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Kiểm tra kết nối trực tiếp đến OpenAI / Gemini API
 app.post('/api/ai/config/test', async (req, res) => {
     const { aiProvider, aiApiKey, aiModel, aiSystemPrompt } = req.body;
