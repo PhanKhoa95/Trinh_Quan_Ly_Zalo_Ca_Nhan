@@ -46,7 +46,7 @@ async function runTier3Tests(baseUrl) {
         const receivedPromises = [];
 
         for (let i = 0; i < CLIENT_COUNT; i++) {
-            const client = io(baseUrl, { transporter: ['websocket'], re-connection: false });
+            const client = io(baseUrl, { transporter: ['websocket'], reconnection: false });
             clients.push(client);
 
             const p = new Promise((resolve, reject) => {
