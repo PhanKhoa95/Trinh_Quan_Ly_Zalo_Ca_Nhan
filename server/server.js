@@ -1652,6 +1652,82 @@ app.post('/api/ai/config', async (req, res) => {
     }
 });
 
+// Import hàng loạt 50+ API Keys với tính năng TỰ ĐỘNG NHẬN DIỆN Nhà Cung Cấp (Provider Auto-Detection)
+app.post('/api/ai/keys/bulk-import', async (req, res) => {
+    try {
+        const { rawText, keysInput } = req.body;
+        const textToProcess = rawText || (Array.isArray(keysInput) ? keysInput.join('\n') : '');
+        if (!textToProcess || !textToProcess.trim()) {
+            return res.status(400).json({ success: false, error: 'Không tìm thấy dữ liệu key đầu vào.' });
+        }
+
+        // Tách chuỗi theo các ký tự phân cách (xuống dòng, dấu phẩy, khoảng trắng, dấu chấm phẩy)
+        const candidateKeys = textToProcess
+            .split(/[\n\r,;\s]+/)
+            .map(k => k.trim().replace(/^['"]|['"]$/g, ''))
+            .filter(k => k.length > 5);
+
+        let currentConfig = await aiSettingsDb.findOne({}) || {};
+        const poolObj = currentConfig.aiApiKeyPool && typeof currentConfig.aiApiKeyPool === 'object' && !Array.isArray(currentConfig.aiApiKeyPool)
+            ? currentConfig.aiApiKeyPool
+            : { openai: [], gemini: [], anthropic: [], deepseek: [], ollama: [], 'ollama-online': [] };
+
+        const summary = { openai: 0, gemini: 0, anthropic: 0, deepseek: 0, unknown: 0, totalProcessed: candidateKeys.length };
+
+        candidateKeys.forEach(k => {
+            let provider = null;
+            if (k.startsWith('AIzaSy')) {
+                provider = 'gemini';
+            } else if (k.startsWith('sk-ant-')) {
+                provider = 'anthropic';
+            } else if (k.startsWith('sk-proj-') || k.startsWith('sk-admin-') || k.startsWith('sk-or-')) {
+                provider = 'openai';
+            } else if (k.startsWith('sk-ds-') || /^sk-[a-f0-9]{32}$/i.test(k)) {
+                provider = 'deepseek';
+            } else if (k.startsWith('sk-') && k.length >= 30) {
+                provider = 'openai';
+            }
+
+            if (provider) {
+                if (!Array.isArray(poolObj[provider])) poolObj[provider] = [];
+                if (!poolObj[provider].includes(k)) {
+                    poolObj[provider].push(k);
+                    summary[provider]++;
+                }
+            } else {
+                summary.unknown++;
+            }
+        });
+
+        currentConfig.aiApiKeyPool = poolObj;
+        currentConfig.updatedAt = new Date();
+
+        await aiSettingsDb.update({}, { $set: { aiApiKeyPool: poolObj, updatedAt: new Date() } }, { upsert: true });
+
+        logger.info('api', '[AI Bulk Key Import] Đã phân loại và nạp hàng loạt thành công:', summary);
+
+        // Tạo masked keys summary trả về UI
+        const maskedPoolObj = {};
+        for (const [p, keys] of Object.entries(poolObj)) {
+            maskedPoolObj[p] = Array.isArray(keys) ? keys.map(key => {
+                const len = key.length;
+                return len > 8 ? key.substring(0, 4) + '...' + key.substring(len - 4) : '********';
+            }) : [];
+        }
+
+        res.json({
+            success: true,
+            message: `Đã phân loại và nhập tự động thành công ${candidateKeys.length - summary.unknown}/${candidateKeys.length} API keys.`,
+            summary,
+            data: {
+                aiAllProviderKeys: maskedPoolObj
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Kiểm tra kết nối trực tiếp đến OpenAI / Gemini API
 app.post('/api/ai/config/test', async (req, res) => {
     const { aiProvider, aiApiKey, aiModel, aiSystemPrompt } = req.body;
