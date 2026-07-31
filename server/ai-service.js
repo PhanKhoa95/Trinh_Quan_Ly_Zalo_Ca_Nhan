@@ -423,85 +423,56 @@ ${enabledToolsList.map(item => `- ${item}`).join('\n')}`;
                 body.tools = activeOpenAITools;
             }
 
-            let response;
-            let attempt = 0;
-            const openaiFallbackModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
+            let response = null;
+            const customOpenAIPool = config.aiModelPool && Array.isArray(config.aiModelPool.openai) && config.aiModelPool.openai.length > 0
+                ? config.aiModelPool.openai
+                : null;
+            const openaiFallbackModels = customOpenAIPool || ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'];
             if (!openaiFallbackModels.includes(model)) {
                 openaiFallbackModels.unshift(model);
             }
-            const maxAttempts = config.isBackground ? Math.max(keys.length, openaiFallbackModels.length) : Math.max(4, keys.length + 1);
-            const backoffDelays = [2000, 5000, 10000];
-            let currentKeyIndex = (globalOpenAIIndex++) % keys.length;
-            let modelIndex = 0;
-            let currentModel = model;
 
-            while (attempt < maxAttempts) {
-                const currentApiKey = keys[currentKeyIndex];
-                currentModel = openaiFallbackModels[modelIndex % openaiFallbackModels.length];
-                body.model = currentModel;
+            let lastOpenAIErr = null;
+            let successOpenAI = false;
 
-                const apiStart = Date.now();
-                try {
-                    response = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${currentApiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(body)
-                    });
+            openAiKeyLoop: for (let kIdx = 0; kIdx < keys.length; kIdx++) {
+                const currentApiKey = keys[(globalOpenAIIndex + kIdx) % keys.length];
 
-                    const latency = Date.now() - apiStart;
+                for (let mIdx = 0; mIdx < openaiFallbackModels.length; mIdx++) {
+                    const currentModel = openaiFallbackModels[mIdx];
+                    body.model = currentModel;
+                    const apiStart = Date.now();
 
-                    if ((response.status === 429 || response.status === 503 || response.status === 404 || response.status === 403 || response.status === 400) && attempt < maxAttempts - 1) {
-                        attempt++;
-                        modelIndex++;
-                        const nextModel = openaiFallbackModels[modelIndex % openaiFallbackModels.length];
-                        logger.warn('api', `[AI Model Fallback] OpenAI model ${currentModel} returned ${response.status}. Rotating to fallback model ${nextModel}...`);
+                    try {
+                        response = await fetch('https://api.openai.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${currentApiKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(body)
+                        });
 
-                        const keysTried = attempt;
-                        if (keys.length > 1 && keysTried < keys.length) {
-                            const prevIndex = currentKeyIndex;
-                            currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-                            logger.warn('api', `[AI Key Pool] Rotating OpenAI key to index ${currentKeyIndex} immediately (Attempt ${attempt})...`);
-                            continue;
+                        const latency = Date.now() - apiStart;
+
+                        if (response.ok) {
+                            logger.info('api', `Gọi OpenAI API thành công. Key Index ${kIdx}, Model: ${currentModel}. Latency: ${latency}ms`);
+                            successOpenAI = true;
+                            break openAiKeyLoop;
                         }
-                        const delay = backoffDelays[attempt - keys.length] || 10000;
-                        logger.warn('api', `[AI Retry] OpenAI Rate/Model Limit. Đang thử lại lần ${attempt} sau ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
-                    }
 
-                    if (response.ok) {
-                        logger.info('api', `Gọi OpenAI API thành công. Model: ${currentModel}. Latency: ${latency}ms`);
+                        const errText = await response.text();
+                        logger.warn('api', `[AI Model Quota Rotation] OpenAI Key Index ${kIdx}, Model ${currentModel} returned HTTP ${response.status}. Khai thác Model tiếp theo trên cùng Key...`, { error: errText });
+                    } catch (fetchErr) {
+                        lastOpenAIErr = fetchErr;
+                        logger.warn('api', `[AI Network Error] Lỗi khi gọi OpenAI API (Key Index ${kIdx}, Model ${currentModel}): ${fetchErr.message}`);
                     }
-                    break;
-                } catch (fetchErr) {
-                    if (attempt < maxAttempts - 1) {
-                        attempt++;
-                        modelIndex++;
-                        if (config.isBackground) {
-                            const prevIndex = currentKeyIndex;
-                            currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-                            logger.warn('api', `[AI Key Pool] OpenAI Network error in background. Rotating to key index ${currentKeyIndex} and model ${openaiFallbackModels[modelIndex % openaiFallbackModels.length]} immediately (Attempt ${attempt})...`);
-                            continue;
-                        }
-                        const delay = backoffDelays[attempt - 1] || 10000;
-                        logger.warn('api', `[AI Retry] Lỗi mạng khi gọi OpenAI API: ${fetchErr.message}. Đang thử lại lần ${attempt} sau ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
-                    }
-                    if (config.isBackground) {
-                        logger.error('api', `[AI Background Error] OpenAI Network error: ${fetchErr.message}. Failing fast.`);
-                        return null;
-                    }
-                    throw fetchErr;
                 }
+                logger.warn('api', `[AI Key Exhausted] Đã khai thác cạn kiệt toàn bộ ${openaiFallbackModels.length} models trên OpenAI Key index ${kIdx}. Chuyển sang Key tiếp theo...`);
             }
 
-            if (!response.ok) {
-                const errText = await response.text();
-                logger.error('api', `OpenAI API Error: HTTP ${response.status}`, { error: errText });
+            if (!successOpenAI || !response || !response.ok) {
+                if (lastOpenAIErr && !response) throw lastOpenAIErr;
                 return null;
             }
 
@@ -676,8 +647,7 @@ ${enabledToolsList.map(item => `- ${item}`).join('\n')}`;
                 }
             }
 
-            let response;
-            let attempt = 0;
+            let response = null;
             const customGeminiPool = config.aiModelPool && Array.isArray(config.aiModelPool.gemini) && config.aiModelPool.gemini.length > 0
                 ? config.aiModelPool.gemini
                 : null;
@@ -691,96 +661,47 @@ ${enabledToolsList.map(item => `- ${item}`).join('\n')}`;
             if (!geminiFallbackModels.includes(normalizedModel)) {
                 geminiFallbackModels.unshift(normalizedModel);
             }
-            if (!geminiFallbackModels.includes(normalizedModel)) {
-                geminiFallbackModels.unshift(normalizedModel);
-            }
-            const maxAttempts = config.isBackground ? Math.max(keys.length, geminiFallbackModels.length) : Math.max(7, keys.length + 1);
-            const backoffDelays = [2000, 5000, 10000];
-            let currentKeyIndex = (globalGeminiIndex++) % keys.length;
-            let modelIndex = 0;
-            let currentModel = normalizedModel;
 
-            while (attempt < maxAttempts) {
-                const currentApiKey = keys[currentKeyIndex];
-                currentModel = geminiFallbackModels[modelIndex % geminiFallbackModels.length];
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentApiKey}`;
-                const apiStart = Date.now();
-                try {
-                    response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(body)
-                    });
+            let lastGeminiErr = null;
+            let successGemini = false;
 
-                    const latency = Date.now() - apiStart;
+            geminiKeyLoop: for (let kIdx = 0; kIdx < keys.length; kIdx++) {
+                const currentApiKey = keys[(globalGeminiIndex + kIdx) % keys.length];
 
-                    if ((response.status === 429 || response.status === 503 || response.status === 404 || response.status === 403 || response.status === 400) && attempt < maxAttempts - 1) {
-                        attempt++;
-                        modelIndex++;
-                        const nextModel = geminiFallbackModels[modelIndex % geminiFallbackModels.length];
-                        logger.warn('api', `[AI Model Fallback] Gemini model ${currentModel} returned ${response.status}. Rotating to fallback model ${nextModel}...`);
+                for (let mIdx = 0; mIdx < geminiFallbackModels.length; mIdx++) {
+                    const currentModel = geminiFallbackModels[mIdx];
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentApiKey}`;
+                    const apiStart = Date.now();
 
-                        const keysTried = attempt;
-                        if (keys.length > 1 && keysTried < keys.length) {
-                            const prevIndex = currentKeyIndex;
-                            currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-                            logger.warn('api', `[AI Key Pool] Rotating Gemini key to index ${currentKeyIndex} immediately (Attempt ${attempt})...`);
-                            continue;
+                    try {
+                        response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(body)
+                        });
+
+                        const latency = Date.now() - apiStart;
+
+                        if (response.ok) {
+                            logger.info('api', `Gọi Gemini API thành công. Key Index ${kIdx}, Model: ${currentModel}. Latency: ${latency}ms`);
+                            successGemini = true;
+                            break geminiKeyLoop;
                         }
 
-                        let delay = backoffDelays[attempt - keys.length] || 10000;
-                        try {
-                            const errJson = await response.clone().json();
-                            if (errJson && errJson.error && errJson.error.details) {
-                                const retryInfo = errJson.error.details.find(d => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo');
-                                if (retryInfo && retryInfo.retryDelay) {
-                                    const seconds = parseFloat(retryInfo.retryDelay);
-                                    if (!isNaN(seconds)) {
-                                        delay = (seconds * 1000) + 1000;
-                                    }
-                                }
-                            }
-                        } catch (parseErr) {
-                            logger.warn('api', `Lỗi đọc thời gian chờ từ Gemini error details: ${parseErr.message}`);
-                        }
-
-                        logger.warn('api', `[AI Retry] Gemini API Rate/Model Limit. Đang thử lại lần ${attempt} sau ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
+                        const errText = await response.text();
+                        logger.warn('api', `[AI Model Quota Rotation] Gemini Key Index ${kIdx}, Model ${currentModel} returned HTTP ${response.status}. Khai thác Model tiếp theo trên cùng Key...`, { error: errText });
+                    } catch (fetchErr) {
+                        lastGeminiErr = fetchErr;
+                        logger.warn('api', `[AI Network Error] Lỗi khi gọi Gemini API (Key Index ${kIdx}, Model ${currentModel}): ${fetchErr.message}`);
                     }
-
-                    if (response.ok) {
-                        logger.info('api', `Gọi Gemini API thành công. Model: ${currentModel}. Latency: ${latency}ms`);
-                    }
-                    break;
-                } catch (fetchErr) {
-                    if (attempt < maxAttempts - 1) {
-                        attempt++;
-                        modelIndex++;
-                        if (config.isBackground) {
-                            const prevIndex = currentKeyIndex;
-                            currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-                            logger.warn('api', `[AI Key Pool] Gemini Network error in background. Rotating to key index ${currentKeyIndex} and model ${geminiFallbackModels[modelIndex % geminiFallbackModels.length]} immediately (Attempt ${attempt})...`);
-                            continue;
-                        }
-                        const delay = backoffDelays[attempt - 1] || 10000;
-                        logger.warn('api', `[AI Retry] Lỗi mạng khi gọi Gemini API: ${fetchErr.message}. Đang thử lại lần ${attempt} sau ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
-                    }
-                    if (config.isBackground) {
-                        logger.error('api', `[AI Background Error] Gemini Network error: ${fetchErr.message}. Failing fast.`);
-                        return null;
-                    }
-                    throw fetchErr;
                 }
+                logger.warn('api', `[AI Key Exhausted] Đã khai thác cạn kiệt toàn bộ ${geminiFallbackModels.length} models trên Gemini Key index ${kIdx}. Chuyển sang Key tiếp theo...`);
             }
 
-            if (!response.ok) {
-                const errText = await response.text();
-                logger.error('api', `Gemini API Error: HTTP ${response.status}`, { error: errText });
+            if (!successGemini || !response || !response.ok) {
+                if (lastGeminiErr && !response) throw lastGeminiErr;
                 return null;
             }
 
