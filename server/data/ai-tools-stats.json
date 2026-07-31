@@ -1,6 +1,6 @@
 {
   "message": {
-    "successes": 417,
+    "successes": 419,
     "errors": 1
   },
   "sendMessage": {
@@ -8,7 +8,7 @@
     "errors": 1
   },
   "reaction": {
-    "successes": 16,
+    "successes": 17,
     "errors": 0
   },
   "undo": {
