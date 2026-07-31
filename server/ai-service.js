@@ -19,6 +19,8 @@ async function downloadImageAsBase64(url) {
         logger.error('zalo', 'Lỗi khi tải và encode hình ảnh từ URL:', { error: err.message, url });
         return null;
     }
+}
+
 const liveModelsCache = {
     gemini: { timestamp: 0, models: [] },
     openai: { timestamp: 0, models: [] },
