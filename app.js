@@ -3693,6 +3693,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Tự động phân loại & Nạp 50+ API Key cùng lúc
+    window.bulkImportKeys = async function(rawText) {
+        if (!rawText || !rawText.trim()) return null;
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/ai/keys/bulk-import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rawText })
+            });
+            const json = await res.json();
+            if (json.success) {
+                if (typeof addTerminalLog === 'function') {
+                    addTerminalLog(`Bulk Import API Keys: ${json.message}`, 'success');
+                }
+                const currentProvider = document.getElementById('ai-provider') ? document.getElementById('ai-provider').value : 'openai';
+                if (json.data && json.data.aiAllProviderKeys) {
+                    aiAllProviderKeys = json.data.aiAllProviderKeys;
+                    renderApiKeyPool(aiAllProviderKeys[currentProvider] || ['']);
+                }
+                alert(json.message + `\nChi tiết:\n- OpenAI: ${json.summary.openai}\n- Gemini: ${json.summary.gemini}\n- Anthropic: ${json.summary.anthropic}\n- DeepSeek: ${json.summary.deepseek}`);
+                return json;
+            } else {
+                alert('Lỗi import key: ' + json.error);
+            }
+        } catch (err) {
+            console.error('Lỗi bulk import keys:', err);
+            alert('Lỗi mạng khi nạp key hàng loạt.');
+        }
+        return null;
+    };
+
+    window.showBulkKeyImportPrompt = function() {
+        const text = prompt('Dán danh sách 50+ API Keys của bạn vào đây (mỗi key 1 dòng hoặc cách nhau bằng dấu phẩy):\nHệ thống sẽ TỰ ĐỘNG PHÂN LOẠI loại Key (OpenAI, Gemini, Anthropic, DeepSeek) chính xác 100%!');
+        if (text) {
+            window.bulkImportKeys(text);
+        }
+    };
+
     // Bind AI Reaction Probability Slider
     const reactProb = document.getElementById('ai-reaction-probability');
     const reactProbVal = document.getElementById('ai-reaction-prob-val');
