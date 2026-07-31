@@ -2805,3 +2805,17 @@ server.listen(PORT, () => {
     // Khởi tạo virtual call socket events đàm thoại thoại ảo
     handleVirtualCallSockets(io);
 });
+
+// Xử lý an toàn các ngoại lệ chưa được bắt (Exception Safety)
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('system', '[Process Exception Safety] Unhandled Rejection detected:', {
+        reason: reason ? (reason.stack || reason.message || reason) : 'Unknown reason'
+    });
+});
+
+process.on('uncaughtException', (err) => {
+    logger.error('system', '[Process Exception Safety] Uncaught Exception detected:', {
+        error: err.stack || err.message
+    });
+});
+

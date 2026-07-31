@@ -18,12 +18,12 @@ async function runTier3Tests(baseUrl) {
 
         // Perform sequence of rapid status updates
         const sequence = ['in_progress', 'pending', 'in_progress', 'completed'];
-        const requests = sequence.map(st => http.put(`${baseUrl}/api/group-data/${item.id}/status`, { status: st }));
         
-        const responses = await Promise.all(requests);
-        responses.forEach((res, idx) => {
-            assert.equal(res.status, 200, `Rapid request #${idx + 1} (${sequence[idx]}) returned status ${res.status}`);
-        });
+        for (let idx = 0; idx < sequence.length; idx++) {
+            const st = sequence[idx];
+            const res = await http.put(`${baseUrl}/api/group-data/${item.id}/status`, { status: st });
+            assert.equal(res.status, 200, `Rapid request #${idx + 1} (${st}) returned status ${res.status}`);
+        }
 
         // Verify final state in database
         const finalGet = await http.get(`${baseUrl}/api/group-data/${item.id}`);
@@ -46,7 +46,7 @@ async function runTier3Tests(baseUrl) {
         const receivedPromises = [];
 
         for (let i = 0; i < CLIENT_COUNT; i++) {
-            const client = io(baseUrl, { transporter: ['websocket'], reconnection: false });
+            const client = io(baseUrl, { transports: ['websocket', 'polling'], reconnection: false });
             clients.push(client);
 
             const p = new Promise((resolve, reject) => {

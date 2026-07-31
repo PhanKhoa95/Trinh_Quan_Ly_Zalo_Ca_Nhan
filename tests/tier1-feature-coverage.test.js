@@ -73,7 +73,12 @@ async function runTier1Tests(baseUrl) {
         const targetItem = createRes.json().data;
 
         // Connect client
-        const clientSocket = io(baseUrl, { transporter: ['websocket'], reconnection: false });
+        const clientSocket = io(baseUrl, { transports: ['websocket', 'polling'], reconnection: false });
+
+        await new Promise((resolve) => {
+            if (clientSocket.connected) return resolve();
+            clientSocket.once('connect', resolve);
+        });
 
         const eventReceivedPromise = new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
