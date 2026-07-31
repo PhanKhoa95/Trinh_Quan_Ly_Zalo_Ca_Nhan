@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 
-const { sessionsDb, rulesDb, campaignsDb, knowledgeDb, aiSettingsDb, callsDb } = require('./database');
+const { sessionsDb, rulesDb, campaignsDb, knowledgeDb, aiSettingsDb, callsDb, groupDataDb, logsDb } = require('./database');
 const ZaloClientWrapper = require('./zalo-client');
 const messageQueue = require('./queue');
 const { syncDocument, startAutoSyncJob } = require('./document-sync');
@@ -163,10 +163,217 @@ async function handleLoginSuccess(userData, sessionName, client) {
 // -------------------------------------------------------------
 // 1. REST API ENDPOINTS
 // -------------------------------------------------------------
+// 1. REST API ENDPOINTS
+// -------------------------------------------------------------
+
+// Helper PDF Invoice Generator
+function generatePdfInvoiceBuffer(order) {
+    const text = `%PDF-1.4
+1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
+2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
+3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> >> endobj
+4 0 obj <</Length 220>> stream
+BT
+/F1 18 Tf
+50 720 Td
+(INVOICE - Zalo Group Manager) Tj
+0 -30 Td
+/F1 12 Tf
+(Invoice ID: ${order.id}) Tj
+0 -20 Td
+(Customer: ${order.senderName || 'N/A'}) Tj
+0 -20 Td
+(Details: ${order.keyInfo || 'N/A'}) Tj
+0 -20 Td
+(Status: ${(order.status || 'completed').toUpperCase()}) Tj
+0 -20 Td
+(Date: ${new Date().toISOString()}) Tj
+ET
+endstream
+endobj
+5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000244 00000 n 
+0000000515 00000 n 
+trailer <</Size 6 /Root 1 0 R>>
+startxref
+596
+%%EOF`;
+    return Buffer.from(text, 'utf-8');
+}
 
 // Kiểm tra ping kết nối
 app.get('/api/ping', (req, res) => {
     res.json({ status: 'ok', time: new Date() });
+});
+
+// Server Health endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', service: 'Zalo Personal Group Manager', time: new Date() });
+});
+
+// Google Sheets Config Endpoints
+app.get('/api/config/google-sheets', async (req, res) => {
+    try {
+        const configPath = path.join(__dirname, 'data', 'google_sheets_config.json');
+        if (fs.existsSync(configPath)) {
+            const raw = fs.readFileSync(configPath, 'utf-8');
+            const parsed = JSON.parse(raw);
+            return res.json({
+                spreadsheetId: parsed.spreadsheetId || '',
+                clientEmail: parsed.clientEmail || '',
+                hasKey: !!parsed.privateKey
+            });
+        }
+        res.json({ spreadsheetId: '', clientEmail: '', hasKey: false });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/config/google-sheets', async (req, res) => {
+    try {
+        const { spreadsheetId, credentials } = req.body || {};
+        if (!spreadsheetId || typeof spreadsheetId !== 'string' || !spreadsheetId.trim()) {
+            return res.status(400).json({ success: false, error: 'Missing or invalid spreadsheet ID' });
+        }
+        if (!credentials || typeof credentials !== 'object' || !credentials.client_email || !credentials.private_key) {
+            return res.status(400).json({ success: false, error: 'Missing or malformed JSON credentials' });
+        }
+
+        const configData = {
+            spreadsheetId,
+            clientEmail: credentials.client_email,
+            privateKey: credentials.private_key,
+            updatedAt: new Date()
+        };
+
+        const configPath = path.join(__dirname, 'data', 'google_sheets_config.json');
+        fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+
+        await logsDb.insert({
+            level: 'info',
+            category: 'sheets',
+            message: 'Google Sheets configuration updated',
+            metadata: JSON.stringify({ spreadsheetId, clientEmail: credentials.client_email })
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/config/google-sheets/logs', async (req, res) => {
+    try {
+        const logs = await logsDb.find({ category: 'sheets' });
+        res.json({ success: true, logs });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Group Data (Kanban) Endpoints
+app.get('/api/group-data', async (req, res) => {
+    try {
+        const items = await groupDataDb.find({});
+        res.json({ success: true, data: items });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/group-data', async (req, res) => {
+    try {
+        const { groupId, zaloId, senderName, dataType, keyInfo, rawMessage, status } = req.body || {};
+        if (!groupId || !keyInfo) {
+            return res.status(400).json({ success: false, error: 'Missing required fields: groupId, keyInfo' });
+        }
+        const newItem = {
+            groupId,
+            zaloId: zaloId || null,
+            senderName: senderName || 'Unknown',
+            dataType: dataType || 'order',
+            keyInfo,
+            rawMessage: rawMessage || null,
+            status: status || 'pending',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        const created = await groupDataDb.insert(newItem);
+        io.emit('group-data-created', created);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/group-data/:id', async (req, res) => {
+    try {
+        const item = await groupDataDb.findOne({ id: req.params.id });
+        if (!item) {
+            return res.status(404).json({ success: false, error: 'Group data record not found' });
+        }
+        res.json({ success: true, data: item });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.put('/api/group-data/:id/status', async (req, res) => {
+    try {
+        const { status } = req.body || {};
+        const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+        if (!status || !validStatuses.includes(status)) {
+            return res.status(400).json({ success: false, error: 'Invalid status transition or value' });
+        }
+
+        const existing = await groupDataDb.findOne({ id: req.params.id });
+        if (!existing) {
+            return res.status(404).json({ success: false, error: 'Group data record not found' });
+        }
+
+        const updated = await groupDataDb.update({ id: req.params.id }, { $set: { status, updatedAt: new Date() } });
+
+        io.emit('group-data-update', { id: req.params.id, status, data: updated });
+
+        if (status === 'completed') {
+            await logsDb.insert({
+                level: 'info',
+                category: 'sheets',
+                message: `Google Sheets sync logged for order ${req.params.id}`,
+                metadata: JSON.stringify({ id: req.params.id, status: 'completed' })
+            });
+        }
+
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/group-data/:id/invoice', async (req, res) => {
+    try {
+        const item = await groupDataDb.findOne({ id: req.params.id });
+        if (!item) {
+            return res.status(404).json({ success: false, error: 'Order not found' });
+        }
+        if (item.status !== 'completed') {
+            return res.status(400).json({ success: false, error: 'PDF request rejected: Invoice only available for completed orders' });
+        }
+
+        const pdfBuf = generatePdfInvoiceBuffer(item);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="invoice_${item.id}.pdf"`);
+        res.send(pdfBuf);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // Lấy danh sách tài khoản Zalo đã lưu session
@@ -1951,7 +2158,7 @@ async function autoconnectAccounts() {
                         saveMessageToDb(gid, msgObj);
                     }
                 }
-            ).catch(err => {
+            , { skipQROnFail: true }).catch(err => {
                 console.error(`Lỗi khi tự động kết nối tài khoản ${session.phone}:`, err.message);
             });
         });
@@ -2543,6 +2750,25 @@ app.post('/api/health/diagnose', async (req, res) => {
 // -------------------------------------------------------------
 io.on('connection', (socket) => {
     console.log('Socket.io: Client mới đã kết nối. Socket ID:', socket.id);
+
+    socket.on('group-data-update', async (data) => {
+        if (!data || !data.id || !data.status) return;
+        const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+        if (!validStatuses.includes(data.status)) return;
+        const record = await groupDataDb.findOne({ id: data.id });
+        if (record) {
+            const updated = await groupDataDb.update({ id: data.id }, { $set: { status: data.status, updatedAt: new Date() } });
+            if (data.status === 'completed') {
+                await logsDb.insert({
+                    level: 'info',
+                    category: 'sheets',
+                    message: `Google Sheets sync logged for order ${data.id}`,
+                    metadata: JSON.stringify({ id: data.id, status: 'completed' })
+                });
+            }
+            io.emit('group-data-update', { id: data.id, status: data.status, data: updated });
+        }
+    });
     
     socket.on('disconnect', () => {
         console.log('Socket.io: Client đã ngắt kết nối.');

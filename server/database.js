@@ -164,6 +164,8 @@ const groupSettingsDb = new PrismaNedbWrapper('groupSetting');
 const aiSettingsDb = new PrismaNedbWrapper('aiSetting', ['aiGroups', 'aiApiKeyPool', 'aiSafetySettings']);
 const knowledgeDb = new PrismaNedbWrapper('knowledge', ['chunks']);
 const callsDb = new PrismaNedbWrapper('call', ['transcript']);
+const groupDataDb = new PrismaNedbWrapper('groupData');
+const logsDb = new PrismaNedbWrapper('log');
 
 // Thêm các quy tắc mặc định nếu database trống
 async function initializeDefaultData() {
@@ -241,5 +243,7 @@ module.exports = {
     groupSettingsDb,
     aiSettingsDb,
     knowledgeDb,
-    callsDb
+    callsDb,
+    groupDataDb,
+    logsDb
 };

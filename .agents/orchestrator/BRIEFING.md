@@ -1,18 +1,18 @@
-# BRIEFING — 2026-06-15T17:12:30+07:00
+# BRIEFING — 2026-07-30T17:48:36+07:00
 
 ## Mission
-Tích hợp giao diện Kanban kéo thả, xuất hóa đơn PDF tự động, và đồng bộ Google Sheets cho Quản lý Zalo Group.
+Audit & fix bugs, UI/UX redesign, Kanban board UI & Socket.io sync, automated PDF invoice generation, Google Sheets dual-mode sync, E2E testing suite, and production packaging for Zalo Personal Group Manager.
 
 ## 🔒 My Identity
 - Archetype: teamwork_preview_orchestrator
 - Roles: orchestrator, user_liaison, human_reporter, successor
-- Working directory: c:\Users\KHOA MEDIA\OneDrive\Documents\Zalo Trình Quản lý Zalo Group Cá nhân\.agents\orchestrator
-- Original parent: main agent
-- Original parent conversation ID: c63481ea-d339-47ce-a701-e505e79700e4
+- Working directory: y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\.agents\orchestrator
+- Original parent: user
+- Original parent conversation ID: b0ec488a-0759-4e84-ac3c-ac337674755c
 
 ## 🔒 My Workflow
 - **Pattern**: Project
-- **Scope document**: c:\Users\KHOA MEDIA\OneDrive\Documents\Zalo Trình Quản lý Zalo Group Cá nhân\.agents\orchestrator\PROJECT.md
+- **Scope document**: y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\PROJECT.md
 1. **Decompose**: Split request into independent milestone modules.
 2. **Dispatch & Execute**:
    - **Delegate (sub-orchestrator)**: Spawn sub-orchestrators for milestones or tracks.
@@ -25,10 +25,15 @@ Tích hợp giao diện Kanban kéo thả, xuất hóa đơn PDF tự động, v
    - Escalate: report to parent (sub-orchestrators only, last resort)
 4. **Succession**: Self-succeed at spawn threshold (16 spawns).
 - **Work items**:
-  - Initial decomposition [pending]
-  - Project execution [pending]
-- **Current phase**: 1
-- **Current focus**: Initial decomposition
+  - Codebase audit & bug fixing [pending]
+  - UI/UX redesign [pending]
+  - Kanban board UI & Socket.io sync [pending]
+  - PDF Invoice generation [pending]
+  - Google Sheets dual-mode sync [pending]
+  - E2E Testing Suite [pending]
+  - Production Packaging [pending]
+- **Current phase**: 1 (Audit & Exploration)
+- **Current focus**: Dispatching codebase exploration & initial E2E test harness setup
 
 ## 🔒 Key Constraints
 - NEVER write, modify, or create source code files directly.
@@ -37,28 +42,34 @@ Tích hợp giao diện Kanban kéo thả, xuất hóa đơn PDF tự động, v
 - Do not reuse a subagent after it has delivered its handoff.
 
 ## Current Parent
-- Conversation ID: c63481ea-d339-47ce-a701-e505e79700e4
-- Updated: not yet
+- Conversation ID: b0ec488a-0759-4e84-ac3c-ac337674755c
+- Updated: 2026-07-30T17:48:36+07:00
 
 ## Key Decisions Made
-- Use Project pattern with dual tracks (Implementation & E2E Testing).
+- Use Project pattern with Dual Tracks (Implementation Track & E2E Testing Track).
 
 ## Team Roster
 | Agent | Type | Work Item | Status | Conv ID |
 |-------|------|-----------|--------|---------|
-| Codebase Investigator | teamwork_preview_explorer | Explore codebase architecture | in-progress | f39d7c43-d441-4957-8a9b-0f8a16d246eb |
+| Codebase Auditor | teamwork_preview_explorer | Code Audit M0 | failed/idle | 26acd47a-92a9-45f3-8a2c-6ed5641e5402 |
+| E2E Testing Specialist | teamwork_preview_worker | E2E Testing Harness M1 | in-progress | e2afb969-e89c-4986-894d-076ed9896c63 |
+| Codebase Auditor (Gen 2) | teamwork_preview_explorer | Code Audit M0 | in-progress | b8ebd176-e6ea-419c-bb96-0bc0869a791a |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 1 / 16
-- Pending subagents: [f39d7c43-d441-4957-8a9b-0f8a16d246eb]
+- Spawn count: 3 / 16
+- Pending subagents: [e2afb969-e89c-4986-894d-076ed9896c63, b8ebd176-e6ea-419c-bb96-0bc0869a791a]
 - Predecessor: none
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: 933afbe3-9238-4f9d-9504-ba203c87ff34/task-23
-- Safety timer: 933afbe3-9238-4f9d-9504-ba203c87ff34/task-51
+- Heartbeat cron: 7343e16e-52fd-4660-8078-067e65107a66/task-21
+- Safety timer: none
 
 ## Artifact Index
-- c:\Users\KHOA MEDIA\OneDrive\Documents\Zalo Trình Quản lý Zalo Group Cá nhân\.agents\orchestrator\ORIGINAL_REQUEST.md — Original User Request
-- c:\Users\KHOA MEDIA\OneDrive\Documents\Zalo Trình Quản lý Zalo Group Cá nhân\.agents\orchestrator\BRIEFING.md — Current Briefing/Working Memory
+- y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\.agents\orchestrator\ORIGINAL_REQUEST.md — Original User Request
+- y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\.agents\orchestrator\BRIEFING.md — Current Briefing/Working Memory
+- y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\.agents\orchestrator\plan.md — Execution Plan
+- y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\.agents\orchestrator\progress.md — Progress Tracking
+- y:\Trinh_Quan_Ly_Zalo_Ca_Nhan\PROJECT.md — Global Project Specification
+

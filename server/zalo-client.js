@@ -62,8 +62,10 @@ class ZaloClientWrapper {
     }
 
     // Khởi chạy tiến trình kết nối và sinh mã QR
-    async initialize(onQrCode, onLoginSuccess, onMessage) {
+    // options.skipQROnFail: khi true, nếu session cũ fail sẽ KHÔNG chạy QR login (dùng cho autoconnect)
+    async initialize(onQrCode, onLoginSuccess, onMessage, options = {}) {
         this.onMessageCallback = onMessage;
+        const skipQROnFail = options.skipQROnFail || false;
         if (this.isSimulation) {
             console.log(`[Simulated Client ${this.accountId}] Bắt đầu quy trình quét QR mô phỏng...`);
             
@@ -124,6 +126,13 @@ class ZaloClientWrapper {
                     logger.warn('zalo', `Không thể khôi phục session cũ: ${err.message}. Tiến hành đăng nhập mới...`);
                     try { fs.unlinkSync(sessionPath); } catch (_) {}
                 }
+            }
+
+            // Nếu skipQROnFail = true (autoconnect), không chạy QR login vì không có người quét
+            if (skipQROnFail) {
+                logger.warn('zalo', `Bỏ qua QR login tự động cho ${this.phone}. Vui lòng đăng nhập lại từ Dashboard.`);
+                this.isLoggedIn = false;
+                return;
             }
 
             // Tiến hành đăng nhập bằng QR Code mới

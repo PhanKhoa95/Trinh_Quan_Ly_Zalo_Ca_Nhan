@@ -93,3 +93,75 @@ Ensure the application is robust:
 ### Testing & Robustness
 - [ ] The E2E test suite can be run via npm script and passes 100% of integration cases.
 - [ ] No server crashes are observed under invalid operations.
+
+## Follow-up — 2026-07-30T10:48:00Z
+
+Audit, fix, redesign and complete the **Zalo Personal Group Manager** — a production Node.js web dashboard for managing Zalo chat groups via personal accounts. The system already has a working backend (Express + Socket.io + Prisma/SQLite + zca-js) and a feature-rich frontend (HTML/CSS/JS SPA). The team must: (1) audit and fix all existing bugs, (2) completely redesign the UI/UX with a modern premium look, (3) complete the 5 planned milestones (Kanban Board, PDF Invoices, Google Sheets Sync, E2E Testing, Adversarial Hardening), and (4) package the product as production-ready with Docker and 1-Click launcher.
+
+Working directory: Y:\Trinh_Quan_Ly_Zalo_Ca_Nhan
+Integrity mode: development
+
+## Requirements
+
+### R1. Code Audit & Bug Fix
+Audit the entire existing codebase — frontend (`index.html`, `app.js`, `styles.css`) and backend (`server/server.js`, `server/zalo-client.js`, `server/ai-service.js`, `server/ai-tools.js`, `server/database.js`, and all other server modules). Identify and fix bugs, dead code, error handling gaps (e.g., unhandled promise rejections that crash the server), performance bottlenecks, and security issues. The server must remain stable under all failure scenarios (QR expiry, session loss, network errors, API timeouts).
+
+### R2. Complete UI/UX Redesign
+Redesign the entire web dashboard with a fresh, premium, modern aesthetic. The current Dark Glassmorphism theme can be kept as inspiration or replaced entirely — the team decides. The redesign must cover all existing tabs/panels plus the new features from R3-R5. The dashboard must be fully responsive, visually stunning, and feel production-grade. All interactive elements must have smooth animations and transitions.
+
+### R3. Kanban Board UI & Real-time Sync (Milestone M2)
+Replace the static Group Data list with a 4-column drag-and-drop Kanban Board (pending → in_progress → completed → cancelled). Cards must sync to the SQLite database via HTTP PUT and broadcast updates in real-time via Socket.io `group-data-update` events. Follow the interface contracts defined in `PROJECT.md`.
+
+### R4. PDF Invoice Generation (Milestone M3)
+Auto-generate a PDF invoice when an order status updates to `completed`. Store generated PDFs on the server filesystem. Add a download button on each Kanban card and data table row. Serve via `GET /api/group-data/:id/invoice` as defined in `PROJECT.md`.
+
+### R5. Google Sheets Sync (Milestone M4)
+Build a configuration UI for Google Sheets integration (spreadsheet ID, service account credentials). Implement backend sync logic that pushes group data to a designated Google Sheet. Follow the `GET/POST /api/config/google-sheets` contracts in `PROJECT.md`. Include a mock/stub mode for testing without real Google credentials.
+
+### R6. E2E Testing Suite (Milestones M1 & M5)
+Create an end-to-end test harness covering the Kanban UI, PDF invoice generation, and Google Sheets sync. Tests must be runnable via a single command and produce a clear pass/fail report.
+
+### R7. Production Packaging
+Package the application for easy deployment:
+- A `run.bat` that auto-installs dependencies and launches the server + opens the browser (already partially exists, improve it)
+- A working `docker-compose.yml` + `Dockerfile` for containerized deployment
+- All environment variables documented in a `.env.example`
+
+## Acceptance Criteria
+
+### Stability
+- [ ] Server starts successfully and serves the dashboard at `http://localhost:3000` without crashes
+- [ ] Server remains running after Zalo session expiry, QR timeout, network errors, or API failures — no unhandled rejections crash the process
+- [ ] All existing functionality (multi-account management, group settings, member moderation, automation campaigns, AI services) continues to work after changes
+
+### UI/UX Quality
+- [ ] Dashboard loads in under 3 seconds on a modern browser
+- [ ] All pages/tabs are fully responsive (desktop, tablet, mobile widths)
+- [ ] All interactive elements (buttons, drag-drop, toggles, modals) have visible hover/active states and smooth transitions
+- [ ] A non-technical user can navigate and understand the dashboard without documentation
+
+### Kanban Board (M2)
+- [ ] Dragging a card between columns updates the database and broadcasts the change via WebSocket
+- [ ] A second browser tab connected via Socket.io sees the card move in real-time within 2 seconds
+- [ ] Cards display relevant group data (name, status, timestamp, summary)
+
+### PDF Invoices (M3)
+- [ ] Changing a card status to `completed` auto-generates a PDF file on the server
+- [ ] `GET /api/group-data/:id/invoice` returns a valid PDF download
+- [ ] Generated PDF contains correct order data (group name, items, amounts, dates)
+
+### Google Sheets Sync (M4)
+- [ ] Configuration UI allows entering spreadsheet ID and service account credentials
+- [ ] `POST /api/config/google-sheets` stores config securely (private key never logged or exposed)
+- [ ] Mock mode works without real Google credentials and produces a verifiable sync log
+
+### Testing (M1 & M5)
+- [ ] All E2E tests pass when run via a single `npm test` or equivalent command
+- [ ] Test output clearly indicates pass/fail per test case with descriptive names
+- [ ] Tests cover: Kanban drag-drop sync, PDF generation, Sheets config save, server stability under error conditions
+
+### Production Packaging (M7)
+- [ ] `run.bat` successfully starts the application on a fresh Windows machine with only Node.js installed
+- [ ] `docker-compose up` builds and runs the application in a container accessible at `localhost:3000`
+- [ ] `.env.example` documents all required and optional environment variables
+

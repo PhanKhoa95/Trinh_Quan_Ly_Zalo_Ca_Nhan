@@ -1,6 +1,6 @@
 {
   "message": {
-    "successes": 366,
+    "successes": 380,
     "errors": 1
   },
   "sendMessage": {
@@ -8,7 +8,7 @@
     "errors": 1
   },
   "reaction": {
-    "successes": 14,
+    "successes": 15,
     "errors": 0
   },
   "undo": {
@@ -16,7 +16,7 @@
     "errors": 0
   },
   "saveMemberMemory": {
-    "successes": 6,
+    "successes": 9,
     "errors": 0
   },
   "group_event": {
@@ -32,7 +32,7 @@
     "errors": 0
   },
   "addReaction": {
-    "successes": 8,
+    "successes": 13,
     "errors": 0
   }
 }
