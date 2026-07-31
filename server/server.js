@@ -1527,7 +1527,7 @@ app.post('/api/ai/config', async (req, res) => {
         aiTemperature, aiTopP, aiMaxTokens, aiFrequencyPenalty, aiPresencePenalty, aiSafetySettings,
         aiTopK, aiReasoningEffort, aiOllamaUrl,
         aiOllamaOnlineUrl, aiOllamaOnlineApiMode,
-        aiAllProviderKeys,
+        aiAllProviderKeys, aiProviderPriority, aiModelPool,
         aiEnableImageGen, aiEnableWebSearch, aiEnableVideoAnalysis,
         aiReactionProbability
     } = req.body;
@@ -1573,15 +1573,28 @@ app.post('/api/ai/config', async (req, res) => {
         const activeKeys = savedPoolObj[activeProvider] || [];
         const keyToSave = activeKeys[0] || '';
 
+        const defaultModelPool = {
+            gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+            openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
+            anthropic: ['claude-3-5-haiku-latest', 'claude-3-5-sonnet-latest'],
+            deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+            'ollama-online': ['llama3.3', 'qwen2.5-coder', 'mistral', 'llama3'],
+            ollama: ['llama3.3', 'qwen2.5-coder', 'mistral', 'llama3']
+        };
+
         const record = {
             aiEnabled: !!aiEnabled,
             aiProvider: aiProvider || 'openai',
             aiApiKey: keyToSave || '',
             aiApiKeyPool: savedPoolObj, // Save as object
+            aiProviderPriority: Array.isArray(aiProviderPriority) && aiProviderPriority.length > 0
+                ? aiProviderPriority
+                : (currentConfig.aiProviderPriority || ['openai', 'gemini', 'anthropic', 'deepseek', 'ollama-online', 'ollama']),
+            aiModelPool: aiModelPool && typeof aiModelPool === 'object' ? aiModelPool : (currentConfig.aiModelPool || defaultModelPool),
             aiModel: aiModel || (aiProvider === 'openai' ? 'gpt-4o-mini' : 
-                                 aiProvider === 'gemini' ? 'gemini-1.5-flash' :
-                                 aiProvider === 'anthropic' ? 'claude-3-5-sonnet-latest' :
-                                 aiProvider === 'deepseek' ? 'deepseek-chat' : 'llama3'),
+                                 aiProvider === 'gemini' ? 'gemini-2.5-flash' :
+                                 aiProvider === 'anthropic' ? 'claude-3-5-haiku-latest' :
+                                 aiProvider === 'deepseek' ? 'deepseek-chat' : 'llama3.3'),
             aiSystemPrompt: aiSystemPrompt || 'Bạn là một trợ lý AI hữu ích trong nhóm chat Zalo.',
             aiMode: aiMode || 'mention_only',
             aiTriggerPrefix: aiTriggerPrefix || '@bot',
